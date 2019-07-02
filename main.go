@@ -6,7 +6,7 @@
 package main
 
 import(
-  "github.com/joroec/virsnap/cmd"
+  "github.com/joroec/virsnap/cmd/virsnap"
 )
 
 // main is the entry point of the application. Just pass execution to command
