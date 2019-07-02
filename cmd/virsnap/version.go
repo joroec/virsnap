@@ -26,7 +26,12 @@ func init() {
 }
 
 // versionRun is the function called after the command line parser detected
-// that we want to end up here.
+// that we want to end up here. This functions does noting except printing
+// the current version number.
 func versionRun(cmd *cobra.Command, args []string) {
-    fmt.Println("virsnap, version 0.1.0")
+  Logger.Trace("Start execution of versionRun function.")
+  
+  fmt.Println("virsnap, version 0.1.0")
+  
+  Logger.Trace("Returning from versionRun function.")
 }
