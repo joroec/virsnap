@@ -6,18 +6,13 @@
 package cmd
 
 import (
-  "os"
-
-  "github.com/Mandala/go-log"
   "github.com/spf13/cobra"
+  log "github.com/sirupsen/logrus"
 )
 
 // Verbose is a persistent flag that can be issued for any command issued over
 // the command line.
 var Verbose bool
-
-// Logger is the global logging object that can be used for console output.
-var Logger *log.Logger
 
 // RootCmd is a global variable defining the corresponding cobra command.
 // PersistentPreRun functions are inherited to child commands, so any command
@@ -35,15 +30,13 @@ var RootCmd = &cobra.Command{
 // debug outputs if the verbose flag is set.
 func initializeLogger(cmd *cobra.Command, args []string) {
   if Verbose {
-    Logger.WithDebug()
+    log.SetLevel(log.TraceLevel)
   }
 }
 
 // init is a special golang function that is called exactly once regardless
 // how often the package is imported.
 func init() {
-  Logger = log.New(os.Stdout)
-
   RootCmd.PersistentFlags().BoolVarP(&Verbose, "verbose", "v", false, 
     "verbose output")
 }

@@ -9,6 +9,7 @@ import (
   "fmt"
 
   "github.com/spf13/cobra"
+  log "github.com/sirupsen/logrus"
 )
 
 // versionCmd is a global variable defining the corresponding cobra command
@@ -29,9 +30,9 @@ func init() {
 // that we want to end up here. This functions does noting except printing
 // the current version number.
 func versionRun(cmd *cobra.Command, args []string) {
-  Logger.Trace("Start execution of versionRun function.")
+  log.Trace("Start execution of versionRun function.")
   
   fmt.Println("virsnap, version 0.1.0")
   
-  Logger.Trace("Returning from versionRun function.")
+  log.Trace("Returning from versionRun function.")
 }
