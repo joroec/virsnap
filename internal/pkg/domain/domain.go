@@ -85,6 +85,7 @@ func GetMatchingDomains(args []string) []DomWithName {
           log.Trace("Found match for VM: ", name)
           matched_domains = append(matched_domains, DomWithName{Domain: domain,
             Name: name})
+          break
         } else {
           // We do not need domain here anymore. The caller is responsible
           // for calling domain.Free() on the returned domains.

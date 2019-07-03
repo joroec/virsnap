@@ -20,9 +20,9 @@ var Verbose bool
 var RootCmd = &cobra.Command{
   Use:   "virsnap",
   Short: "virsnap is a small tool that eases the creation of KVM snapshots "+
-         "for backup purposes",
+         "for backup purposes.",
   Long:  "virsnap is a small tool that eases the creation of KVM snapshots "+
-         "for backup purposes",
+         "for backup purposes.",
   PersistentPreRun: initializeLogger,
 }
 

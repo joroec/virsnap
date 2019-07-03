@@ -16,11 +16,15 @@ import (
 
 // listvmsCmd is a global variable defining the corresponding cobra command
 var listvmsCmd = &cobra.Command{
-  Use:   "listvms",
+  Use:   "listvms [<regex1> [<regex2> ...]]",
   Short: "List the virtual machines that can be detected via using libvirt.",
   Long:  "List the virtual machines that can be detected via using libvirt. "+
-    "This is meant to be a simple method of testing your connection to the "+
-    "libvirt daemon and should produce the same result as 'virsh list --all'.",
+    "This is meant to be a simple method of testing both your connection to "+
+    "the libvirt daemon and regular expressions for virtual machine "+
+    "selection. For example, 'virsnap listvms \".*\"' prints all accessible "+
+    "virtual machines, whereas 'virsnap listvms \"testing\"' prints only "+
+    "virtual machines whose name includes \"testing\". If no regex is given, "+
+    "any acccessible virtual machine is printed.",
   Run: listvmsRun,
 }
 
@@ -38,10 +42,16 @@ func init() {
 func listvmsRun(cmd *cobra.Command, args []string) {
   log.Trace("Start execution of listvmsRun function.")
   
-  // listvms should display any virtual machine found. So, we need to specify
-  // a search regex that matches any virtual machine name.
-  regex := []string{".*"}
-  domains := domain.GetMatchingDomains(regex)
+  var domains []domain.DomWithName
+  if len(args) > 0 {
+    // a regex has been specified, so we take it to filter the virtual machines
+    domains = domain.GetMatchingDomains(args)
+  } else {
+    // listvms should display any virtual machine found. So, we need to specify
+    // a search regex that matches any virtual machine name.
+    regex := []string{".*"}
+    domains = domain.GetMatchingDomains(regex)
+  }
   defer domain.FreeDomains(domains)
   
   for _, domain := range(domains) {
