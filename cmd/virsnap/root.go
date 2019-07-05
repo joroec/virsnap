@@ -7,6 +7,8 @@ package cmd
 
 import (
   "github.com/spf13/cobra"
+  "github.com/joroec/virsnap/pkg/virt"
+  
   log "github.com/sirupsen/logrus"
 )
 
@@ -31,6 +33,7 @@ var RootCmd = &cobra.Command{
 func initializeLogger(cmd *cobra.Command, args []string) {
   if Verbose {
     log.SetLevel(log.TraceLevel)
+    virt.Logger.SetLevel(log.TraceLevel)
   }
 }
 

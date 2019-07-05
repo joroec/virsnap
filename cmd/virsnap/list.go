@@ -7,9 +7,13 @@ package cmd
 
 import (
   "fmt"
+  "os"
+  "time"
+  "strconv"
   
   log "github.com/sirupsen/logrus"
   "github.com/spf13/cobra"
+  "github.com/olekukonko/tablewriter"
 
   "github.com/joroec/virsnap/pkg/virt"
 )
@@ -23,7 +27,7 @@ var listCmd = &cobra.Command{
     "via using libvirt. This is meant to be a simple method of getting an "+
     "overview of the current virtual machines and the corresponding "+
     "snapshots. It is possible to specify a regular expression that filters "+
-    "the shwon virtual names by name. For example, 'virsnap list \".*\"' "+
+    "the shwon virtual machines by name. For example, 'virsnap list \".*\"' "+
     "prints all accessible virtual machines with the corresponding snapshots "+
     ", whereas 'virsnap list \"testing\"' prints only virtual machines with "+
     "the corresponding snapshots whose name includes \"testing\". If no "+
@@ -40,43 +44,65 @@ func init() {
 
 // listRun is the function called after the command line parser detected
 // that we want to end up here.
-func listRun(cmd *cobra.Command, args []string) {
-  log.Trace("Start execution of listRun function.")
-  
+func listRun(cmd *cobra.Command, args []string) {  
   var err error
   var vms []virt.VM
+  
   if len(args) > 0 {
-    // a regex has been specified, so we take it to filter the virtual machines
+    log.Debug("Using regular expression specified as command line argument.")
     vms, err = virt.ListMatchingVMs(args)
   } else {
     // listvms should display any virtual machine found. So, we need to specify
     // a search regex that matches any virtual machine name.
+    log.Debug("Using default regular expression '.*', since no regular "+
+      "expression was specified as command line argument.")
     regex := []string{".*"}
     vms, err = virt.ListMatchingVMs(regex)
   }
   
   if err != nil {
-    log.Error("Could not retrieve the virtual machines")
-    return
+    err = fmt.Errorf("Could not retrieve the virtual machines from libvirt: %v",
+      err)
+    log.Fatal(err)
   }
   
   defer virt.FreeVMs(vms)
+
   
   for _, vm := range(vms) {
-    fmt.Println(vm.Descriptor.Name)
-    
     snapshots, err := vm.ListMatchingSnapshots([]string{".*"})
     if err != nil {
-      log.Error("Could not retrieve the snapshots for the domain:", 
-        vm.Descriptor.Name, ". Skipping the domain.")
+      log.Errorf("Could not retrieve the snapshots for the domain %s. "+
+        "Skipping the domain.", vm.Descriptor.Name)
       continue
     }
     
     defer virt.FreeSnapshots(snapshots)
-    
-    // iterate over the snapshots, retrieve the name and print it
+
+    fmt.Println("VM:", vm.Descriptor.Name)
+
+    table := tablewriter.NewWriter(os.Stdout)
+    table.SetHeader([]string{"Snapshot", "Time", "State"})
+    table.SetRowLine(false)
+
     for _, snapshot := range(snapshots) {
-      fmt.Println("    "+snapshot.Descriptor.Name)
+      
+      time_int, err := strconv.ParseInt(snapshot.Descriptor.CreationTime, 10, 
+        64)
+      if err != nil {
+        log.Errorf("Could not convert the snapshot creation time of VM %s. "+
+          "Skipping VM: %v", vm.Descriptor.Name, err)
+        continue
+      }
+      time := time.Unix(time_int, 0)
+      
+      table.Append([]string{snapshot.Descriptor.Name, 
+        time.Format("Mon Jan 2 15:04:05 MST 2006"), snapshot.Descriptor.State})
     }
+    
+    table.Render()
+    fmt.Println("")
   }
+  
+  
 }

@@ -81,6 +81,7 @@ func createRun(cmd *cobra.Command, args []string) {
       return // we are in an anonymous function
     }
     
+    // TODO: catch error with doubled name?
     snapshot, err := vm.Instance.CreateSnapshotXML(xml, 0)
     if err != nil {
       log.Error("Could not create the snapshot for the VM:", vm.Descriptor.Name,
