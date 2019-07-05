@@ -11,12 +11,14 @@ import (
   "github.com/spf13/cobra"
   log "github.com/sirupsen/logrus"
   
-  "github.com/joroec/virsnap/internal/pkg/domain"
+  "github.com/joroec/virsnap/pkg/vm"
 )
+
+// TODO: Fix output if there is no snapshot for a VM...
 
 // listvmsCmd is a global variable defining the corresponding cobra command
 var listvmsCmd = &cobra.Command{
-  Use:   "listvms [<regex1> [<regex2> ...]]",
+  Use:   "listvms [<regex1>] [<regex2>] [<regex3>] ...",
   Short: "List the virtual machines that can be detected via using libvirt.",
   Long:  "List the virtual machines that can be detected via using libvirt. "+
     "This is meant to be a simple method of testing both your connection to "+
@@ -42,20 +44,27 @@ func init() {
 func listvmsRun(cmd *cobra.Command, args []string) {
   log.Trace("Start execution of listvmsRun function.")
   
-  var domains []domain.DomWithName
+  var err error
+  var vms []vm.NamedVM
   if len(args) > 0 {
     // a regex has been specified, so we take it to filter the virtual machines
-    domains = domain.GetMatchingDomains(args)
+    vms, err = vm.GetMatchingVMs(args)
   } else {
     // listvms should display any virtual machine found. So, we need to specify
     // a search regex that matches any virtual machine name.
     regex := []string{".*"}
-    domains = domain.GetMatchingDomains(regex)
+    vms, err = vm.GetMatchingVMs(regex)
   }
-  defer domain.FreeDomains(domains)
   
-  for _, domain := range(domains) {
-    fmt.Println(domain.Name)
+  if err != nil {
+    log.Error("Could not retrieve the virtual machines")
+    return
+  }
+  
+  defer vm.FreeVMs(vms)
+  
+  for _, vm := range(vms) {
+    fmt.Println(vm.Name)
   }
   
   log.Trace("Returning from listvmsRun function.")
