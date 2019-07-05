@@ -6,16 +6,12 @@
 package cmd
 
 import (
-  "fmt"
-  "strings"
   "sort"
   
   "github.com/spf13/cobra"
-  "github.com/libvirt/libvirt-go"
-  "github.com/libvirt/libvirt-go-xml"
   
   log "github.com/sirupsen/logrus"
-  VM "github.com/joroec/virsnap/pkg/vm"
+  "github.com/joroec/virsnap/pkg/virt"
 )
 
 var keepVersions int
@@ -41,114 +37,48 @@ func init() {
   RootCmd.AddCommand(cleanCmd)
 }
 
-// DescribedSnapshot is a wrapper class for a snapshot Object together
-// with its marshalled form from libvirtxml
-type DescribedSnapshot struct {
-  Obj libvirt.DomainSnapshot
-  Desc libvirtxml.DomainSnapshot
-}
 
 func cleanRun(cmd *cobra.Command, args []string) {
   
-  vms, err := VM.GetMatchingVMs(args)
+  vms, err := virt.ListMatchingVMs(args)
   if err != nil {
     log.Fatal("Could not retrieve the virtual machines")
   }
   
-  defer VM.FreeVMs(vms)
+  defer virt.FreeVMs(vms)
   
   for _, vm := range(vms) {
     
     // iterate over the domains and clean the snapshots for each of it
-    func(){
-      
-      snapshots, err := vm.Domain.ListAllSnapshots(0)
+    snapshots, err := vm.ListMatchingSnapshots([]string{".*"})
+    if err != nil {
+      log.Error("Could not get the snapshot for VM %s. Skipping this VM: %v",
+        vm.Descriptor.Name, err)
+      continue
+    }
+    
+    defer virt.FreeSnapshots(snapshots)
+    
+    // TODO: insert quick check whether there are enough snapshots
+    
+    // sort the snapshots according to their creation date increasingly
+    sorter := virt.SnapshotSorter{
+      Snapshots: &snapshots,
+    }
+    sort.Sort(&sorter)
+    
+    // iterate over the snapshot exceeding the k snapshots that should
+    // remain
+    for i := 0; i < len(snapshots)-keepVersions; i++ {
+      log.Info("Removing snapshot", snapshots[i].Descriptor.Name, "of VM", 
+        vm.Descriptor.Name)
+      err = snapshots[i].Instance.Delete(0)
       if err != nil {
-        log.Error("Could not get the snapshot for VM:", vm.Name, err)
-        return // we are in an anonymous function
+        log.Error("Could not remove snapshot %s of VM %s: %v", 
+          snapshots[i].Descriptor.Name, vm.Descriptor.Name, err)
       }
-      
-      // iterate over snapshot and check for prefix
-      snapshot_Descs := make([]DescribedSnapshot, 0, len(snapshots))
-      for _, snapshot := range(snapshots) {
-        
-        xml, err := snapshot.GetXMLDesc(0)
-        if err != nil {
-          log.Error("Could not get the snapshot xml for VM:", vm.Name,
-            err)
-          return // we are in an anonymous function
-        }
-        
-        Descriptor := libvirtxml.DomainSnapshot{}
-        err = Descriptor.Unmarshal(xml)
-        if err != nil {
-          log.Error("Could not unmarshal the snapshot xml for VM:", vm.Name,
-            ". Skipping the VM.")
-          return // we are in an anonymous function
-        }
-        
-        if strings.HasPrefix(Descriptor.Name, "virsnap_") {
-          Desc_snap := DescribedSnapshot{
-            Obj: snapshot,
-            Desc: Descriptor,
-          }
-          snapshot_Descs = append(snapshot_Descs, Desc_snap)
-        } else {
-          snapshot.Free()
-        }
-        
-      }
-      
-      // TODO: insert quick check whether there are enough snapshots
-      
-      // sort the snapshots according to their creation date increasingly
-      sorter := SnapshotSorter{
-        Snapshots: &snapshot_Descs,
-      }
-      sort.Sort(&sorter)
-      
-      // remove snapshots that are to old and exceed the number of snapshots
-      // to keep.
-      
-      // iterate over the snapshot exceeding the k snapshots that should
-      // remain
-      for i := 0; i < len(snapshot_Descs)-keepVersions; i++ {
-        log.Info("Removing snapshot", snapshot_Descs[i].Desc.Name, "of VM", 
-          vm.Name)
-        err = snapshot_Descs[i].Obj.Delete(0)
-        if err != nil {
-          log.Error("Could not remove snapshot", snapshot_Descs[i].Desc.Name,
-            "of VM", vm.Name)
-        }
-      }
-      
-      // TODO: Free Domain snapshots
-      for _, item := range(snapshot_Descs) {
-        fmt.Println("Item: ", item.Desc.Name, "Date:", item.Desc.CreationTime)
-      }
-      
-      
-      log.Trace("Leaving creation of snapshot for VM:", vm.Name)
-    }()
+    }
     
   }
   
-}
-
-type SnapshotSorter struct {
-  Snapshots *[]DescribedSnapshot
-}
-
-func (s *SnapshotSorter) Len() int {
-  return len(*s.Snapshots)
-}
-
-func (s *SnapshotSorter) Less(i int, j int) bool {
-  return (*s.Snapshots)[i].Desc.CreationTime < 
-    (*s.Snapshots)[j].Desc.CreationTime
-}
-
-func (s *SnapshotSorter) Swap(i int, j int) {
-  (*s.Snapshots)[i].Desc, (*s.Snapshots)[j].Desc = 
-    (*s.Snapshots)[j].Desc, (*s.Snapshots)[i].Desc
 }

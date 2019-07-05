@@ -11,7 +11,7 @@ import (
   log "github.com/sirupsen/logrus"
   "github.com/spf13/cobra"
 
-  "github.com/joroec/virsnap/pkg/vm"
+  "github.com/joroec/virsnap/pkg/virt"
 )
 
 
@@ -44,15 +44,15 @@ func listRun(cmd *cobra.Command, args []string) {
   log.Trace("Start execution of listRun function.")
   
   var err error
-  var vms []vm.NamedVM
+  var vms []virt.VM
   if len(args) > 0 {
     // a regex has been specified, so we take it to filter the virtual machines
-    vms, err = vm.GetMatchingVMs(args)
+    vms, err = virt.ListMatchingVMs(args)
   } else {
     // listvms should display any virtual machine found. So, we need to specify
     // a search regex that matches any virtual machine name.
     regex := []string{".*"}
-    vms, err = vm.GetMatchingVMs(regex)
+    vms, err = virt.ListMatchingVMs(regex)
   }
   
   if err != nil {
@@ -60,34 +60,23 @@ func listRun(cmd *cobra.Command, args []string) {
     return
   }
   
-  defer vm.FreeVMs(vms)
+  defer virt.FreeVMs(vms)
   
   for _, vm := range(vms) {
-    fmt.Println(vm.Name)
+    fmt.Println(vm.Descriptor.Name)
     
-    // since we do not want to filter the results, we pass a 0 as argument
-    snapshots, err := vm.Domain.ListAllSnapshots(0)
+    snapshots, err := vm.ListMatchingSnapshots([]string{".*"})
     if err != nil {
       log.Error("Could not retrieve the snapshots for the domain:", 
-        vm.Name, ". Skipping the domain.")
+        vm.Descriptor.Name, ". Skipping the domain.")
       continue
     }
     
+    defer virt.FreeSnapshots(snapshots)
+    
     // iterate over the snapshots, retrieve the name and print it
     for _, snapshot := range(snapshots) {
-    
-      func(){
-        defer snapshot.Free()
-        
-        name, err := snapshot.GetName()
-        if err != nil {
-          log.Error("Could not get the name of a snapshot. Skipping...")
-          log.Error("Error: %s\n", err)
-          return // no continue here, since we are in an anonymous function
-        }
-        
-        fmt.Println("    "+name)
-      }()
+      fmt.Println("    "+snapshot.Descriptor.Name)
     }
   }
 }
