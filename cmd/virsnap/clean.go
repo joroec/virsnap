@@ -45,6 +45,12 @@ func cleanRun(cmd *cobra.Command, args []string) {
   
   defer virt.FreeVMs(vms)
   
+  if len(vms) == 0 {
+    log.Info("There were no virtual machines matchig the given regular "+
+      "expression(s).")
+    return
+  }
+  
   for _, vm := range(vms) {
     
     // iterate over the domains and clean the snapshots for each of it

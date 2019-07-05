@@ -30,8 +30,8 @@ func (vm *VM) Free() error {
 }
 
 // TODO: add documentation
-// TODO: add parameter for force
-func (vm *VM) Shutdown() (libvirt.DomainState, error) {
+// TODO: implement parameter force
+func (vm *VM) Shutdown(force bool) (libvirt.DomainState, error) {
   former_state, _, err := vm.Instance.GetState()
   if err != nil {
     err = fmt.Errorf("Could not retrieve the state of the VM %s; "+
@@ -75,6 +75,11 @@ func (vm *VM) Shutdown() (libvirt.DomainState, error) {
     if new_state != libvirt.DOMAIN_SHUTOFF {
       err = fmt.Errorf("Could not shutdown the domain %s! State is %s!", 
         vm.Descriptor.Name, GetStateString(new_state))
+      
+      if force {
+        // TODO: implement
+      }
+      
       return libvirt.DOMAIN_RUNNING, err
     }
     

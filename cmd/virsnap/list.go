@@ -23,7 +23,7 @@ import (
 // listCmd is a global variable defining the corresponding cobra command
 var listCmd = &cobra.Command{
   Use:   "list [<regex1>] [<regex2>] [<regex3>] ...",
-  Short: "List snapshots of one or more virtual machines.",
+  Short: "List snapshots of one or more virtual machines",
   Long:  "List the virtual machine with the snapshots that can be detected "+
     "via using libvirt. This is meant to be a simple method of getting an "+
     "overview of the current virtual machines and the corresponding "+
@@ -68,6 +68,12 @@ func listRun(cmd *cobra.Command, args []string) {
   }
   
   defer virt.FreeVMs(vms)
+  
+  if len(vms) == 0 {
+    log.Info("There were no virtual machines matchig the given regular "+
+      "expression(s).")
+    return
+  }
   
   for index, vm := range(vms) {
     vmstate, err :=  vm.GetCurrentStateString()
