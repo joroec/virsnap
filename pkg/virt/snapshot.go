@@ -9,6 +9,7 @@ package virt
 import (
   "fmt"
   "regexp"
+  "sort"
   
   "github.com/libvirt/libvirt-go"
   "github.com/libvirt/libvirt-go-xml"
@@ -31,6 +32,7 @@ func (s *Snapshot) Free() error {
 // -----------------------------------------------------------------------------
 
 // TODO: add documentation
+// returns sorted increasingly accoriding to SnapshotCreation data
 func (vm *VM) ListMatchingSnapshots(regexes []string) ([]Snapshot, error) {
   // argument validity checking
   exprs := make([]*regexp.Regexp, 0, len(regexes))
@@ -107,6 +109,12 @@ func (vm *VM) ListMatchingSnapshots(regexes []string) ([]Snapshot, error) {
       }
     }
   }
+  
+  // sort the snapshots according to their creation date increasingly
+  sorter := SnapshotSorter{
+    Snapshots: &matched_snapshots,
+  }
+  sort.Sort(&sorter)
   
   return matched_snapshots, nil
 }

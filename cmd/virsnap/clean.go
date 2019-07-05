@@ -6,8 +6,6 @@
 package cmd
 
 import (
-  "sort"
-  
   "github.com/spf13/cobra"
   
   log "github.com/sirupsen/logrus"
@@ -61,11 +59,6 @@ func cleanRun(cmd *cobra.Command, args []string) {
     
     // TODO: insert quick check whether there are enough snapshots
     
-    // sort the snapshots according to their creation date increasingly
-    sorter := virt.SnapshotSorter{
-      Snapshots: &snapshots,
-    }
-    sort.Sort(&sorter)
     
     // iterate over the snapshot exceeding the k snapshots that should
     // remain

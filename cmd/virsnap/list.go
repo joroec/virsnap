@@ -68,9 +68,6 @@ func listRun(cmd *cobra.Command, args []string) {
   }
   
   defer virt.FreeVMs(vms)
-
-  // TODO: sort the output
-  // TODO: what if there are no snapshots? Do not print table...
   
   for index, vm := range(vms) {
     vmstate, err :=  vm.GetCurrentStateString()
@@ -89,10 +86,15 @@ func listRun(cmd *cobra.Command, args []string) {
     defer virt.FreeSnapshots(snapshots)
 
     // print the VM header to stdout
-    fmt.Printf("%s, (current state: %s, %d snapshots total)\n", 
+    fmt.Printf("%s (current state: %s, %d snapshots total)\n", 
       color.BGreen(vm.Descriptor.Name), vmstate,
       len(snapshots))
 
+    // print no snapshot table if there are no snapshots for this VM
+    if len(snapshots) == 0 {
+      continue
+    }
+    
     table := tablewriter.NewWriter(os.Stdout)
     table.SetHeader([]string{"Snapshot", "Time", "State"})
     table.SetRowLine(false)
@@ -120,6 +122,4 @@ func listRun(cmd *cobra.Command, args []string) {
       fmt.Println("")
     }
   }
-  
-  
 }
