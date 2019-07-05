@@ -148,6 +148,17 @@ func (vm *VM) Start() error {
   return nil
 }
 
+func (vm *VM) GetCurrentStateString() (string, error) {
+  state, _, err := vm.Instance.GetState()
+  if err != nil {
+    err = fmt.Errorf("Could not retrieve the state of the VM %s; "+
+      "Error was: %v", vm.Descriptor.Name, err)
+    return "DOMAIN_NOSTATE", err
+  }
+  
+  return GetStateString(state), nil
+}
+
 
 // -----------------------------------------------------------------------------
 

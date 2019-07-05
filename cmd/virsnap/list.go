@@ -14,6 +14,7 @@ import (
   log "github.com/sirupsen/logrus"
   "github.com/spf13/cobra"
   "github.com/olekukonko/tablewriter"
+  "github.com/bclicn/color"
 
   "github.com/joroec/virsnap/pkg/virt"
 )
@@ -68,8 +69,16 @@ func listRun(cmd *cobra.Command, args []string) {
   
   defer virt.FreeVMs(vms)
 
+  // TODO: sort the output
+  // TODO: what if there are no snapshots? Do not print table...
   
-  for _, vm := range(vms) {
+  for index, vm := range(vms) {
+    vmstate, err :=  vm.GetCurrentStateString()
+    if err != nil {
+      log.Errorf("Could not retrieve the current state of the VM %s: %v ",
+        vm.Descriptor.Name, err)
+    }
+    
     snapshots, err := vm.ListMatchingSnapshots([]string{".*"})
     if err != nil {
       log.Errorf("Could not retrieve the snapshots for the domain %s. "+
@@ -79,7 +88,10 @@ func listRun(cmd *cobra.Command, args []string) {
     
     defer virt.FreeSnapshots(snapshots)
 
-    fmt.Println("VM:", vm.Descriptor.Name)
+    // print the VM header to stdout
+    fmt.Printf("%s, (current state: %s, %d snapshots total)\n", 
+      color.BGreen(vm.Descriptor.Name), vmstate,
+      len(snapshots))
 
     table := tablewriter.NewWriter(os.Stdout)
     table.SetHeader([]string{"Snapshot", "Time", "State"})
@@ -87,21 +99,26 @@ func listRun(cmd *cobra.Command, args []string) {
 
     for _, snapshot := range(snapshots) {
       
-      time_int, err := strconv.ParseInt(snapshot.Descriptor.CreationTime, 10, 
-        64)
+      // convert timestamp to human-readable format
+      time_i, err := strconv.ParseInt(snapshot.Descriptor.CreationTime, 10, 64)
       if err != nil {
         log.Errorf("Could not convert the snapshot creation time of VM %s. "+
           "Skipping VM: %v", vm.Descriptor.Name, err)
         continue
       }
-      time := time.Unix(time_int, 0)
+      time := time.Unix(time_i, 0)
       
+      // append the table row for this snapshot
       table.Append([]string{snapshot.Descriptor.Name, 
         time.Format("Mon Jan 2 15:04:05 MST 2006"), snapshot.Descriptor.State})
     }
     
     table.Render()
-    fmt.Println("")
+    
+    // do not print a new line if we are the last VM
+    if index != len(vms)-1 {
+      fmt.Println("")
+    }
   }
   
   
