@@ -121,7 +121,6 @@ func createRun(cmd *cobra.Command, args []string) {
     if err == nil {
       log.Infof("Created snapshot \"%s\" for VM \"%s\".",
         snapshot.Descriptor.Name, vm.Descriptor.Name)
-      defer snapshot.Free()
     } else {
       log.Errorf("Could not create snapshot for VM: \"%s\": %v",
         vm.Descriptor.Name, err)
@@ -129,19 +128,24 @@ func createRun(cmd *cobra.Command, args []string) {
       // no continue here, since we want to startup the VM is any case!
     }
     
-    if(former_state == libvirt.DOMAIN_RUNNING) {
-      log.Debugf("Startup VM \"%s\".", vm.Descriptor.Name)
-      err = vm.Start()
-      if err != nil {
-        log.Errorf("Could not startup the VM \"%s\": %v", vm.Descriptor.Name,
-          err)
-        failed = true
-        continue
+    func(){ // anonymous function for not calling snapshot.Free in a loop
+      defer snapshot.Free()
+      
+      if(former_state == libvirt.DOMAIN_RUNNING) {
+        log.Debugf("Startup VM \"%s\".", vm.Descriptor.Name)
+        err = vm.Start()
+        if err != nil {
+          log.Errorf("Could not startup the VM \"%s\": %v", vm.Descriptor.Name,
+            err)
+          failed = true
+          return // we are in an anonymous function
+        }
       }
-    }
+      
+      log.Debugf("Leaving creation of snapshot \"%s\" for VM \"%s\".",
+        snapshot.Descriptor.Name, vm.Descriptor.Name)
+    }()
     
-    log.Debugf("Leaving creation of snapshot \"%s\" for VM \"%s\".",
-      snapshot.Descriptor.Name, vm.Descriptor.Name)
   }
   
   if failed {
