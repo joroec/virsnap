@@ -184,15 +184,21 @@ func (vm *VM) Shutdown(force bool, timeout int) (libvirt.DomainState, error) {
   }
 }
 
-// Start is a simple wrapper method around the libvirt.Create function.
+// Start is a simple wrapper method around the libvirt.Create function that
+// tries the startup the VM multiple times before returning an error.
 func (vm *VM) Start() error {
-  err := vm.Instance.Create()
-  if err != nil {
-    err = fmt.Errorf("Could not boot up the VM \"%s\": %v", vm.Descriptor.Name,
-      err)
-    return err
+  var err error
+  for i := 0; i < 3; i++ {
+    err = vm.Instance.Create()
+    if err == nil {
+      return nil
+    } else {
+      Logger.Errorf("Could not boot up the VM \"%s\": %v", vm.Descriptor.Name,
+        err)
+      time.Sleep(5 * time.Second)
+    }
   }
-  return nil
+  return err
 }
 
 func (vm *VM) GetCurrentStateString() (string, error) {

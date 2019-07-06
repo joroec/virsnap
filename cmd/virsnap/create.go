@@ -134,6 +134,9 @@ func createRun(cmd *cobra.Command, args []string) {
     }
     defer snapshot.Free()
     
+    log.Infof("Created snapshot \"%s\" for VM \"%s\".",
+      descriptor.Name, vm.Descriptor.Name)
+    
     if(former_state == libvirt.DOMAIN_RUNNING) {
       log.Debugf("Startup VM \"%s\".", vm.Descriptor.Name)
       err = vm.Start()
