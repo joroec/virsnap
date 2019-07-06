@@ -29,9 +29,12 @@ func (vm *VM) Free() error {
   return vm.Instance.Free()
 }
 
-// TODO: add documentation
-// TODO: implement parameter force
-func (vm *VM) Shutdown(force bool) (libvirt.DomainState, error) {
+// Shutdown tries to shutdown the VM on which the method is executed. Since a
+// virtual machine may hang or even ignore the request to shutdown gracefully,
+// you can specify (force parameter) wheter you want to force the shutdown
+// (plug the power cord) after several "normal" tries. The method returns
+// the previous state of the VM.
+func (vm *VM) Shutdown(force bool, timeout int) (libvirt.DomainState, error) {
   former_state, _, err := vm.Instance.GetState()
   if err != nil {
     err = fmt.Errorf("Could not retrieve the state of the VM %s; "+
@@ -53,10 +56,12 @@ func (vm *VM) Shutdown(force bool) (libvirt.DomainState, error) {
       return libvirt.DOMAIN_RUNNING, err
     }
     
-    // waiting for the VM to be in state shutoff
-    // TODO: add a dynamic timeout later on
+    Logger.Debugf("Waiting vor the VM %s to be shutoff.", vm.Descriptor.Name)
+    
+    start_time := time.Now()
     new_state := libvirt.DOMAIN_RUNNING
-    for i := 0; i < 15; i++ {
+    
+    for true {
       new_state, _, err = vm.Instance.GetState()
       if err != nil {
         err = fmt.Errorf("Could not re-retrieve the state of the VM %s. "+
@@ -65,6 +70,10 @@ func (vm *VM) Shutdown(force bool) (libvirt.DomainState, error) {
       }
       
       if new_state == libvirt.DOMAIN_SHUTOFF {
+        break
+      }
+      
+      if time.Since(start_time)  > time.Duration(5)*time.Minute {
         break
       }
       

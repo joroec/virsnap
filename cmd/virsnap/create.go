@@ -24,6 +24,10 @@ var shutdown bool
 // shutdown of virtual machine before taking the snapshot
 var force bool
 
+// timeout is a global variable determing the timeout in minutes to wait for a
+// graceful shutdown before forcing the shutdown if enabled
+var timeout int
+
 // createCmd is a global variable defining the corresponding cobra command
 var createCmd = &cobra.Command{
   Use:   "create <regex1> [<regex2>] [<regex3>] ...",
@@ -63,6 +67,11 @@ func init() {
     "shutdown of the virtual machine. This flag can be combined with -s "+
     "exclusively.")
   
+  createCmd.Flags().IntVarP(&timeout, "timeout", "t", 3, "Timeout in minutes "+
+    "to wait for a virtual machine to shutdown gracefully. If the timeout "+
+    "expires and force is specified, plug the power cord to bring the machine "+
+    "down.")
+  
   // add command to root command so that cobra works as expected
   RootCmd.AddCommand(createCmd)
 }
@@ -92,7 +101,7 @@ func createRun(cmd *cobra.Command, args []string) {
     
     former_state := libvirt.DOMAIN_NOSTATE
     if(shutdown) {
-      former_state, err = vm.Shutdown(force)
+      former_state, err = vm.Shutdown(force, timeout)
       if err != nil {
         log.Error(err)
         continue
