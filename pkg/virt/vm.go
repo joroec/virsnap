@@ -10,6 +10,7 @@ import (
   "fmt"
   "regexp"
   "time"
+  "strings"
   
   "github.com/libvirt/libvirt-go"
   "github.com/libvirt/libvirt-go-xml"
@@ -24,7 +25,8 @@ type VM struct {
   Descriptor libvirtxml.Domain
 }
 
-// TODO: add documentation
+// Free ist just a convenience function to free the associated libvirt.Domain
+// instance.
 func (vm *VM) Free() error {
   return vm.Instance.Free()
 }
@@ -37,62 +39,92 @@ func (vm *VM) Free() error {
 func (vm *VM) Shutdown(force bool, timeout int) (libvirt.DomainState, error) {
   former_state, _, err := vm.Instance.GetState()
   if err != nil {
-    err = fmt.Errorf("Could not retrieve the state of the VM %s; "+
+    err = fmt.Errorf("Could not retrieve the state of the VM \"%s\"; "+
       "Error was: %v", vm.Descriptor.Name, err)
     return libvirt.DOMAIN_NOSTATE, err
   }
   
-  Logger.Debug("Initial state of VM %s is %s", vm.Descriptor.Name, 
+  Logger.Debugf("Initial state of VM \"%s\" is \"%s\"", vm.Descriptor.Name, 
     GetStateString(former_state))
   
   switch former_state {
 
   case libvirt.DOMAIN_RUNNING:
-    Logger.Debug("Sending shutdown request")
-    err = vm.Instance.Shutdown() // returns instantly
-    if err != nil {
-      err = fmt.Errorf("Could not initiate the shutdown request for VM %s: %v",
-        vm.Descriptor.Name, err)
-      return libvirt.DOMAIN_RUNNING, err
-    }
-    
-    Logger.Debugf("Waiting vor the VM %s to be shutoff.", vm.Descriptor.Name)
-    
-    start_time := time.Now()
+    round_seconds := 0.33 * float64(timeout*60)
     new_state := libvirt.DOMAIN_RUNNING
-    
-    for true {
-      new_state, _, err = vm.Instance.GetState()
+
+    // if the virtual machine seems to not react to the first shutdown request,
+    // repeatedly send further requests to gracefully shutdown
+    for i := 0; i < 3; i++ {
+      before := time.Now()
+      
+      Logger.Debugf("Sending shutdown request to VM \"%s\".",
+        vm.Descriptor.Name)
+      err = vm.Instance.Shutdown() // returns instantly
       if err != nil {
-        err = fmt.Errorf("Could not re-retrieve the state of the VM %s. "+
-          "Trying again...: %v", vm.Descriptor.Name, err)
-        Logger.Warn(err)
+        // we need to cast to specific libvirt error, since the VM might
+        // be in a shutoff state since last check. If this is the case, we
+        // do not want to return an error!
+        lverr, ok := err.(libvirt.Error)
+        if ok && (lverr.Code == libvirt.ERR_OPERATION_INVALID ||
+            strings.Contains(lverr.Message, "domain is not running")) {
+          Logger.Debugf("VM \"%s\" was shutdown in the meantime.",
+            vm.Descriptor.Name)
+          return libvirt.DOMAIN_RUNNING, nil 
+        
+        } else {
+          err = fmt.Errorf("Could not initiate the shutdown request for "+
+            "VM \"%s\": %v", vm.Descriptor.Name, err)
+          return libvirt.DOMAIN_RUNNING, err
+        }
       }
       
-      if new_state == libvirt.DOMAIN_SHUTOFF {
-        break
-      }
-      
-      if time.Since(start_time)  > time.Duration(5)*time.Minute {
-        break
-      }
-      
-      time.Sleep(5 * time.Second)
+      Logger.Debugf("Waiting vor the VM \"%s\" to shutdown.", 
+        vm.Descriptor.Name)
+      for true {
+        
+        // sleep some seconds
+        time.Sleep(5 * time.Second)
+        
+        new_state, _, err = vm.Instance.GetState()
+        if err != nil {
+          err = fmt.Errorf("Could not re-retrieve the state of the VM \"%s\". "+
+            "Trying again...: %v", vm.Descriptor.Name, err)
+          Logger.Warn(err)
+        }
+        
+        if new_state == libvirt.DOMAIN_SHUTOFF {
+          return libvirt.DOMAIN_RUNNING, nil
+        }
+        
+        // if we waited longer since 33% of the timeout, try sending the
+        // shutdown request again
+        after := time.Now()
+        duration := after.Sub(before) // int64 nanosecods
+        max_round_duration := time.Duration(round_seconds)*time.Second
+        if duration > max_round_duration {
+          Logger.Debug("Beginning next round.")
+          break
+        }
+      }  
     }
     
-    // TODO: add a better error handling
-    if new_state != libvirt.DOMAIN_SHUTOFF {
-      err = fmt.Errorf("Could not shutdown the domain %s! State is %s!", 
-        vm.Descriptor.Name, GetStateString(new_state))
-      
-      if force {
-        // TODO: implement
+    // could not shutdown the VM gracefully, force?
+    if force {
+      Logger.Debugf("Destroying the VM \"%s\" since it could not be shutdown "+
+        "gracefully.", vm.Descriptor.Name)
+      err = vm.Instance.Destroy()
+      if err != nil {
+        err = fmt.Errorf("Could not destroy the VM \"%s\": %v",
+          vm.Descriptor.Name, err)
+        return libvirt.DOMAIN_RUNNING, err
       }
-      
+      return libvirt.DOMAIN_RUNNING, nil
+    } else {
+      err = fmt.Errorf("Could not shutdown the VM \"%s\"! State is now \"%s\"!", 
+        vm.Descriptor.Name, GetStateString(new_state))
       return libvirt.DOMAIN_RUNNING, err
     }
-    
-    return libvirt.DOMAIN_RUNNING, nil
   
   case libvirt.DOMAIN_BLOCKED:
     err = fmt.Errorf("VM %s is blocked; dont know how to handle that!",
@@ -152,11 +184,12 @@ func (vm *VM) Shutdown(force bool, timeout int) (libvirt.DomainState, error) {
   }
 }
 
-// TODO: add documentation
+// Start is a simple wrapper method around the libvirt.Create function.
 func (vm *VM) Start() error {
   err := vm.Instance.Create()
   if err != nil {
-    err = fmt.Errorf("Could not boot up the VM %s: %v", vm.Descriptor.Name, err)
+    err = fmt.Errorf("Could not boot up the VM \"%s\": %v", vm.Descriptor.Name,
+      err)
     return err
   }
   return nil

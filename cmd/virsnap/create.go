@@ -25,7 +25,8 @@ var shutdown bool
 var force bool
 
 // timeout is a global variable determing the timeout in minutes to wait for a
-// graceful shutdown before forcing the shutdown if enabled
+// graceful shutdown before forcing the shutdown if enabled or returning with
+// an error code
 var timeout int
 
 // createCmd is a global variable defining the corresponding cobra command
@@ -68,9 +69,10 @@ func init() {
     "exclusively.")
   
   createCmd.Flags().IntVarP(&timeout, "timeout", "t", 3, "Timeout in minutes "+
-    "to wait for a virtual machine to shutdown gracefully. If the timeout "+
-    "expires and force is specified, plug the power cord to bring the machine "+
-    "down.")
+    "to wait for a virtual machine to shutdown gracefully before returning an "+
+    "error code or forcing the shutdown (flag -f). This flag is only "+
+    "combinable with -s and -f . If the timeout expires and force is "+
+    "specified, plug the power cord to bring the machine down.")
   
   // add command to root command so that cobra works as expected
   RootCmd.AddCommand(createCmd)
@@ -108,7 +110,8 @@ func createRun(cmd *cobra.Command, args []string) {
       }
     }
     
-    log.Trace("Beginning creation of snapshot for VM:", vm.Descriptor.Name)
+    log.Debugf("Beginning creation of snapshot for VM \"%s\".",
+      vm.Descriptor.Name)
     
     descriptor := &libvirtxml.DomainSnapshot{
       Name: "virsnap_"+ namesgenerator.GetRandomName(0),
@@ -117,30 +120,33 @@ func createRun(cmd *cobra.Command, args []string) {
     
     xml, err := descriptor.Marshal()
     if err != nil {
-      log.Error("Could not marshal the snapshot xml for VM:",
-        vm.Descriptor.Name, ". Skipping the VM.")
+      log.Errorf("Could not marshal the snapshot xml for VM \"%s\". Skipping "+
+        "the VM.", vm.Descriptor.Name)
       continue
     }
     
     // TODO: catch error with doubled name?
     snapshot, err := vm.Instance.CreateSnapshotXML(xml, 0)
     if err != nil {
-      log.Error("Could not create the snapshot for the VM:", vm.Descriptor.Name,
-        ". Skipping the VM.")
+      log.Errorf("Could not create the snapshot for the VM \"%s\". Skipping "+
+        "the VM.", vm.Descriptor.Name)
       continue
     }
     defer snapshot.Free()
     
     if(former_state == libvirt.DOMAIN_RUNNING) {
+      log.Debugf("Startup VM \"%s\".", vm.Descriptor.Name)
       err = vm.Start()
       if err != nil {
-        log.Error(err)
-        continue // TODO: is it good to continue here?
+        log.Errorf("Could not startup the VM \"%s\": %v", vm.Descriptor.Name,
+          err)
+        // TODO: Do more than an error message? Return code specification?
+        continue
       }
     }
     
-    log.Trace("Leaving creation of snapshot for VM:", vm.Descriptor.Name)
+    log.Debugf("Leaving creation of snapshot for VM \"%s\".",
+      vm.Descriptor.Name)
   }
   
-  log.Trace("Start execution of createRun function.")
 }
