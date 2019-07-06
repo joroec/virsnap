@@ -8,10 +8,8 @@ package cmd
 import (
   "github.com/spf13/cobra"
   log "github.com/sirupsen/logrus"
-  "github.com/docker/docker/pkg/namesgenerator"
 
   "github.com/libvirt/libvirt-go"
-  "github.com/libvirt/libvirt-go-xml"
   
   "github.com/joroec/virsnap/pkg/virt"
 )
@@ -113,29 +111,17 @@ func createRun(cmd *cobra.Command, args []string) {
     log.Debugf("Beginning creation of snapshot for VM \"%s\".",
       vm.Descriptor.Name)
     
-    descriptor := &libvirtxml.DomainSnapshot{
-      Name: "virsnap_"+ namesgenerator.GetRandomName(0),
-      Description: "snapshot created by virsnap.",
+    snapshot, err := vm.CreateSnapshot("virsnap_",
+      "snapshot created by virnsnap")
+    if err == nil {
+      log.Infof("Created snapshot \"%s\" for VM \"%s\".",
+        snapshot.Descriptor.Name, vm.Descriptor.Name)
+      defer snapshot.Free()
+    } else {
+      log.Errorf("Could not create snapshot for VM: \"%s\": %v",
+        vm.Descriptor.Name, err)
+      // no continue here, since we want to startup the VM is any case!
     }
-    
-    xml, err := descriptor.Marshal()
-    if err != nil {
-      log.Errorf("Could not marshal the snapshot xml for VM \"%s\". Skipping "+
-        "the VM.", vm.Descriptor.Name)
-      continue
-    }
-    
-    // TODO: catch error with doubled name?
-    snapshot, err := vm.Instance.CreateSnapshotXML(xml, 0)
-    if err != nil {
-      log.Errorf("Could not create the snapshot for the VM \"%s\". Skipping "+
-        "the VM.", vm.Descriptor.Name)
-      continue
-    }
-    defer snapshot.Free()
-    
-    log.Infof("Created snapshot \"%s\" for VM \"%s\".",
-      descriptor.Name, vm.Descriptor.Name)
     
     if(former_state == libvirt.DOMAIN_RUNNING) {
       log.Debugf("Startup VM \"%s\".", vm.Descriptor.Name)
@@ -148,8 +134,8 @@ func createRun(cmd *cobra.Command, args []string) {
       }
     }
     
-    log.Debugf("Leaving creation of snapshot for VM \"%s\".",
-      vm.Descriptor.Name)
+    log.Debugf("Leaving creation of snapshot \"%s\" for VM \"%s\".",
+      snapshot.Descriptor.Name, vm.Descriptor.Name)
   }
   
 }

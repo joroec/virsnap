@@ -11,6 +11,7 @@ import (
   "regexp"
   "sort"
   
+  "github.com/docker/docker/pkg/namesgenerator"
   "github.com/libvirt/libvirt-go"
   "github.com/libvirt/libvirt-go-xml"
 )
@@ -131,6 +132,54 @@ func FreeSnapshots(snapshots []Snapshot) {
       Logger.Warn(err)
     }
   }
+}
+
+// CreateSnapshot creates a snapshot for the given domain while checking
+// whether the name is already used. The given prefix is prepended to the
+// snapshots name. The caller is responsible for calling Free on the snapshot.
+func (vm *VM) CreateSnapshot(prefix string, description string) (Snapshot,
+    error) {
+  var descriptor libvirtxml.DomainSnapshot
+  
+  for true {
+    descriptor = libvirtxml.DomainSnapshot{
+      Name: prefix + namesgenerator.GetRandomName(0),
+      Description: description,
+    }
+    
+    // check if name is already given
+    regex := []string{"^"+descriptor.Name+"$"}
+    snapshots, err := vm.ListMatchingSnapshots(regex)
+    if err != nil {
+      err = fmt.Errorf("Could not retrieve the existing snapshot for VM "+
+        "\"%s\": %v", vm.Descriptor.Name, err)
+      return Snapshot{}, err
+    }
+    
+    if len(snapshots) == 0 {
+      break
+    }
+  }
+  
+  // create the snapshot with the given name
+  xml, err := descriptor.Marshal()
+  if err != nil {
+    err = fmt.Errorf("Could not marshal the snapshot xml for VM \"%s\".", 
+      vm.Descriptor.Name, err)
+    return Snapshot{}, err
+  }
+  
+  snapshot, err := vm.Instance.CreateSnapshotXML(xml, 0)
+  if err != nil {
+    err = fmt.Errorf("Could not create the snapshot for the VM \"%s\".",
+      vm.Descriptor.Name)
+    return Snapshot{}, err
+  }
+  
+  return Snapshot{
+    Instance: *snapshot,
+    Descriptor: descriptor,
+  }, nil
 }
 
 // -----------------------------------------------------------------------------
