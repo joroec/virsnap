@@ -7,10 +7,10 @@ package cmd
 
 import (
   "github.com/spf13/cobra"
+  "github.com/libvirt/libvirt-go"
+
   log "github.com/sirupsen/logrus"
 
-  "github.com/libvirt/libvirt-go"
-  
   "github.com/joroec/virsnap/pkg/virt"
 )
 
@@ -96,6 +96,10 @@ func createRun(cmd *cobra.Command, args []string) {
     return
   }
   
+  // a boolean indicating whether at least one error occured. Useful for
+  // the exit code of the program after iterating over the virtual machines
+  failed := false
+  
   for _, vm := range(vms) {
     // iterate over the domains and crete a new snapshot for each of it
     
@@ -104,6 +108,7 @@ func createRun(cmd *cobra.Command, args []string) {
       former_state, err = vm.Shutdown(force, timeout)
       if err != nil {
         log.Error(err)
+        failed = true
         continue
       }
     }
@@ -120,6 +125,7 @@ func createRun(cmd *cobra.Command, args []string) {
     } else {
       log.Errorf("Could not create snapshot for VM: \"%s\": %v",
         vm.Descriptor.Name, err)
+      failed = true
       // no continue here, since we want to startup the VM is any case!
     }
     
@@ -129,13 +135,17 @@ func createRun(cmd *cobra.Command, args []string) {
       if err != nil {
         log.Errorf("Could not startup the VM \"%s\": %v", vm.Descriptor.Name,
           err)
-        // TODO: Do more than an error message? Return code specification?
+        failed = true
         continue
       }
     }
     
     log.Debugf("Leaving creation of snapshot \"%s\" for VM \"%s\".",
       snapshot.Descriptor.Name, vm.Descriptor.Name)
+  }
+  
+  if failed {
+    log.Fatal("There were some errors during creation of the snapshots.")
   }
   
 }
