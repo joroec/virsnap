@@ -76,9 +76,9 @@ func init() {
   RootCmd.AddCommand(createCmd)
 }
 
-// args are the name of the VMs to backup
+// createRun takes as parameter the name of the VMs to create a snapshot for
 func createRun(cmd *cobra.Command, args []string) {
-  // check the validity of the flags
+  // check the validity of the console line parameters
   if force && !shutdown {
     log.Fatal("The flag -f can only be specified if -s was specified!")
   }
@@ -89,7 +89,7 @@ func createRun(cmd *cobra.Command, args []string) {
   
   vms, err := virt.ListMatchingVMs(args)
   if err != nil {
-    log.Fatal("Could not retrieve the virtual machines")
+    log.Fatal("Could not retrieve the virtual machines.")
   }
   
   defer virt.FreeVMs(vms)
