@@ -31,6 +31,7 @@ func (vm *VM) Free() error {
   return vm.Instance.Free()
 }
 
+// TODO: add documentation
 func (vm *VM) Transition(to libvirt.DomainState, forceShutdown bool, 
     timeout int) (libvirt.DomainState, error)  {
   
@@ -53,6 +54,8 @@ func (vm *VM) Transition(to libvirt.DomainState, forceShutdown bool,
   
   // outer switch: current state of VM, inner switch: target state of VM
   switch state {
+    
+  // HANDLE RUNNING VM ---------------------------------------------------------
   case libvirt.DOMAIN_RUNNING:
     
     switch to {
@@ -117,8 +120,6 @@ func (vm *VM) Transition(to libvirt.DomainState, forceShutdown bool,
         Logger.Debugf("Waiting vor the VM \"%s\" to shutdown.", 
           vm.Descriptor.Name)
         for true {
-          
-          // sleep some seconds
           time.Sleep(5 * time.Second)
           
           new_state, _, err = vm.Instance.GetState()
@@ -170,6 +171,214 @@ func (vm *VM) Transition(to libvirt.DomainState, forceShutdown bool,
       return state, err
     }
   
+  // HANDLE SHUTOFF VM ---------------------------------------------------------
+  case libvirt.DOMAIN_SHUTOFF:
+    // we only need three cases here: Either the VM is already shutdown or
+    // the VM should be started. In any other case, the VM needs to be
+    // booted up, before the follow-up transition can occur.
+    if to == libvirt.DOMAIN_SHUTOFF {
+      Logger.Debugf("Domain \"%s\" is already shutoff.", vm.Descriptor.Name)
+      return state, nil
+    } else if to == libvirt.DOMAIN_RUNNING {
+      
+      err := vm.Instance.Create()
+      if err != nil {
+        Logger.Errorf("Could not boot up the VM \"%s\": %v", vm.Descriptor.Name,
+          err)
+        return state, err
+      }
+      return state, nil
+      
+    } else {
+      // First Transition: Wait for the VM to be running
+      prev, err := vm.Transition(libvirt.DOMAIN_RUNNING, forceShutdown, timeout)
+      if err != nil {
+        return state, err
+      }
+      
+      if prev != state {
+        Logger.Warnf("State of VM \"%s\" has changed in the meantime. Was "+
+          "\"%s\", now it is \"%s\"!", vm.Descriptor.Name, state, prev)
+      }
+      
+      // Second Transition: Transition to the acutal target state
+      prev, err = vm.Transition(to, forceShutdown, timeout)
+      if err != nil {
+        return state, err
+      }
+      
+      if prev != libvirt.DOMAIN_RUNNING {
+        Logger.Warnf("State of VM \"%s\" has changed in the meantime. Was "+
+          "\"%s\", now it is \"%s\"!", vm.Descriptor.Name, state, prev)
+      }
+      
+      return state, nil
+    }
+  
+  // HANDLE SHUTDOWNING VM -----------------------------------------------------
+  case libvirt.DOMAIN_SHUTDOWN:
+    // we only need two cases here: Wait for the VM to shutdown and anything
+    // else because in any other case than waiting for the VM to shutdown we
+    // would need wait nevertheless and then execute the follow-up transition.
+    if to == libvirt.DOMAIN_SHUTOFF {
+      
+      Logger.Debugf("Waiting vor the VM \"%s\" to shutdown.", 
+        vm.Descriptor.Name)
+      before := time.Now()
+      for true {
+        time.Sleep(5 * time.Second)
+        
+        new_state, _, err := vm.Instance.GetState()
+        if err != nil {
+          err = fmt.Errorf("Could not re-retrieve the state of the VM "+
+            "\"%s\". Trying again...: %v", vm.Descriptor.Name, err)
+          Logger.Warn(err)
+        }
+        
+        if new_state == libvirt.DOMAIN_SHUTOFF {
+          // returning shutoff, since this will be the future state of the VM.
+          // A caller should assume this as previous state, since the VM would
+          // have entered the shutoff state without any further intervention.
+          return libvirt.DOMAIN_SHUTOFF, nil
+        }
+        
+        after := time.Now()
+        duration := after.Sub(before) // int64 nanosecods
+        if duration > time.Duration(timeout)*time.Minute {
+          Logger.Debugf("Beginning next graceful shutdown round for VM "+
+            "\"%s\".", vm.Descriptor.Name)
+          break
+        }
+      }
+      
+      // returning shutoff, since this will be the future state of the VM.
+      // A caller should assume this as previous state, since the VM would
+      // have entered the shutoff state without any further intervention.
+      return libvirt.DOMAIN_SHUTOFF, nil
+      
+    } else {
+      // First Transition: Wait for the VM to be shutoff
+      prev, err := vm.Transition(libvirt.DOMAIN_SHUTOFF, forceShutdown, timeout)
+      if err != nil {
+        // return shutoff, since the VM reaches this state without any further
+        // intervention.
+        return libvirt.DOMAIN_SHUTOFF, err
+      }
+      
+      if prev != state && prev != libvirt.DOMAIN_SHUTOFF {
+        Logger.Warnf("State of VM \"%s\" has changed in the meantime. Was "+
+          "\"%s\", now it is \"%s\"!", vm.Descriptor.Name, state, prev)
+      }
+      
+      // Second Transition: Transition to the acutal target state
+      prev, err = vm.Transition(to, forceShutdown, timeout)
+      if err != nil {
+        // return shutoff, since the VM reaches this state without any further
+        // intervention.
+        return libvirt.DOMAIN_SHUTOFF, err
+      }
+      
+      if prev != libvirt.DOMAIN_SHUTOFF {
+        Logger.Warnf("State of VM \"%s\" has changed in the meantime. Was "+
+          "\"%s\", now it is \"%s\"!", vm.Descriptor.Name, state, prev)
+      }
+      
+      // return shutoff, since the VM reaches this state without any further
+      // intervention.
+      return libvirt.DOMAIN_SHUTOFF, nil
+    }
+  
+  // HANDLE PAUSED VM ----------------------------------------------------------
+  case libvirt.DOMAIN_PAUSED:
+    // we only need three cases here: Either the VM is already paused or
+    // the VM should be woken up. In any other case, the VM needs to be
+    // woken up, before the follow-up transition can occur.
+    if to == libvirt.DOMAIN_PAUSED {
+      Logger.Debugf("Domain \"%s\" is already paused.", vm.Descriptor.Name)
+      return state, nil
+    } else if to == libvirt.DOMAIN_RUNNING {
+      
+      Logger.Debugf("Resuming domain \"%s\".", vm.Descriptor.Name)
+      err = vm.Instance.Resume()
+      if err != nil {
+        err = fmt.Errorf("Could not resume the VM \"%s\"; Error was: %v",
+          vm.Descriptor.Name, err)
+        return state, err
+      }
+      return state, nil
+      
+    } else {
+      // First Transition: Wait for the VM to be resumed
+      prev, err := vm.Transition(libvirt.DOMAIN_RUNNING, forceShutdown, timeout)
+      if err != nil {
+        return state, err
+      }
+      
+      if prev != state {
+        Logger.Warnf("State of VM \"%s\" has changed in the meantime. Was "+
+          "\"%s\", now it is \"%s\"!", vm.Descriptor.Name, state, prev)
+      }
+      
+      // Second Transition: Transition to the acutal target state
+      prev, err = vm.Transition(to, forceShutdown, timeout)
+      if err != nil {
+        return state, err
+      }
+      
+      if prev != state {
+        Logger.Warnf("State of VM \"%s\" has changed in the meantime. Was "+
+          "\"%s\", now it is \"%s\"!", vm.Descriptor.Name, state, prev)
+      }
+      
+      return state, nil
+    }
+
+  // HANDLE PMSUSPENDED VM -----------------------------------------------------
+  case libvirt.DOMAIN_PMSUSPENDED:
+    // we only need three cases here: Either the VM is already pmsuspended or
+    // the VM should be resumed. In any other case, the VM needs to be
+    // resumed, before the follow-up transition can occur.
+    if to == libvirt.DOMAIN_PMSUSPENDED {
+      Logger.Debugf("Domain \"%s\" is already pmsuspended.", vm.Descriptor.Name)
+      return state, nil
+    } else if to == libvirt.DOMAIN_RUNNING {
+      
+      Logger.Debugf("Wake up domain \"%s\".", vm.Descriptor.Name)
+      err = vm.Instance.PMWakeup(0)
+      if err != nil {
+        err = fmt.Errorf("Could not wake up the VM \"%s\"; Error was: %v",
+          vm.Descriptor.Name, err)
+        return state, err
+      }
+      return state, nil
+      
+    } else {
+      // First Transition: Wait for the VM to be woken up
+      prev, err := vm.Transition(libvirt.DOMAIN_RUNNING, forceShutdown, timeout)
+      if err != nil {
+        return state, err
+      }
+      
+      if prev != state {
+        Logger.Warnf("State of VM \"%s\" has changed in the meantime. Was "+
+          "\"%s\", now it is \"%s\"!", vm.Descriptor.Name, state, prev)
+      }
+      
+      // Second Transition: Transition to the acutal target state
+      prev, err = vm.Transition(to, forceShutdown, timeout)
+      if err != nil {
+        return state, err
+      }
+      
+      if prev != state {
+        Logger.Warnf("State of VM \"%s\" has changed in the meantime. Was "+
+          "\"%s\", now it is \"%s\"!", vm.Descriptor.Name, state, prev)
+      }
+      
+      return state, nil
+    }
+  
+  // HANDLE BLOCKED VM ---------------------------------------------------------
   // TODO: What exactly is a blocked VM?
   case libvirt.DOMAIN_BLOCKED:
     
@@ -192,103 +401,9 @@ func (vm *VM) Transition(to libvirt.DomainState, forceShutdown bool,
     // TODO: implement this case, then remove the fallthrough
     fallthrough
     
-  case libvirt.DOMAIN_PAUSED:
-    
-    switch to {
-    case libvirt.DOMAIN_RUNNING:
-      Logger.Debugf("Resuming domain \"%s\".", vm.Descriptor.Name)
-      err = vm.Instance.Resume()
-      if err != nil {
-        err = fmt.Errorf("Could not resume the VM \"%s\"; Error was: %v",
-          vm.Descriptor.Name, err)
-        return state, err
-      }
-      return state, nil
-    
-    case libvirt.DOMAIN_PAUSED:
-      Logger.Debugf("Domain \"%s\" is already paused.", vm.Descriptor.Name)
-      return state, nil
   
-    case libvirt.DOMAIN_PMSUSPENDED:
-      // First transition: VM to running
-      prev, err := vm.Transition(libvirt.DOMAIN_RUNNING, forceShutdown, timeout)
-      if err != nil {
-        return state, err
-      }
-      
-      if prev != libvirt.DOMAIN_PAUSED {
-        Logger.Warnf("State of VM \"%s\" has changed in the meantime. Was "+
-          "\"%s\", now it is \"%s\"!", vm.Descriptor.Name, state, prev)
-      }
-      
-      // Second transition: VM to pmsuspend
-      prev, err = vm.Transition(libvirt.DOMAIN_PMSUSPENDED, forceShutdown,
-        timeout)
-      if err != nil {
-        return state, err
-      }
-      
-      if prev != libvirt.DOMAIN_RUNNING {
-        Logger.Warnf("State of VM \"%s\" has changed in the meantime. Was "+
-          "\"%s\", now it is \"%s\"!", vm.Descriptor.Name, state, prev)
-      }
-      
-      return state, nil
-    
-    case libvirt.DOMAIN_SHUTOFF:
-      // First transition: VM to running
-      prev, err := vm.Transition(libvirt.DOMAIN_RUNNING, forceShutdown, timeout)
-      if err != nil {
-        return state, err
-      }
-      
-      if prev != libvirt.DOMAIN_PAUSED {
-        Logger.Warnf("State of VM \"%s\" has changed in the meantime. Was "+
-          "\"%s\", now it is \"%s\"!", vm.Descriptor.Name, state, prev)
-      }
-      
-      // Second transition: VM to shutoff
-      prev, err = vm.Transition(libvirt.DOMAIN_SHUTOFF, forceShutdown,
-        timeout)
-      if err != nil {
-        return state, err
-      }
-      
-      if prev != libvirt.DOMAIN_RUNNING {
-        Logger.Warnf("State of VM \"%s\" has changed in the meantime. Was "+
-          "\"%s\", now it is \"%s\"!", vm.Descriptor.Name, state, prev)
-      }
-      
-      return state, nil
-
-    default:
-      err = fmt.Errorf("Cannot start the transition of VM \"%s\" to state "+
-        "\"%s\". Target state is not allowed!", vm.Descriptor.Name,
-        GetStateString(to))
-      return state, err
-    }
-    
-  case libvirt.DOMAIN_SHUTDOWN:
-    
-    switch to {
-    case libvirt.DOMAIN_RUNNING:
-    
-    case libvirt.DOMAIN_PAUSED:
-  
-    case libvirt.DOMAIN_PMSUSPENDED:
-      
-    case libvirt.DOMAIN_SHUTOFF:
-
-    default:
-      err = fmt.Errorf("Cannot start the transition of VM \"%s\" to state "+
-        "\"%s\". Target state is not allowed!", vm.Descriptor.Name,
-        GetStateString(to))
-      return state, err
-    }
-    
-    // TODO: implement this case, then remove the fallthrough
-    fallthrough
-    
+  // HANDLE CRASHED VM ---------------------------------------------------------
+  // TODO: What exactly does it mean if the domain has crashed?
   case libvirt.DOMAIN_CRASHED:
     
     switch to {
@@ -309,52 +424,8 @@ func (vm *VM) Transition(to libvirt.DomainState, forceShutdown bool,
     
     // TODO: implement this case, then remove the fallthrough
     fallthrough
-    
-  case libvirt.DOMAIN_PMSUSPENDED:
-    
-    switch to {
-    case libvirt.DOMAIN_RUNNING:
-    
-    case libvirt.DOMAIN_PAUSED:
   
-    case libvirt.DOMAIN_PMSUSPENDED:
-      Logger.Debugf("Domain \"%s\" is already pmsuspend.", vm.Descriptor.Name)
-      return state, nil
-      
-    case libvirt.DOMAIN_SHUTOFF:
-
-    default:
-      err = fmt.Errorf("Cannot start the transition of VM \"%s\" to state "+
-        "\"%s\". Target state is not allowed!", vm.Descriptor.Name,
-        GetStateString(to))
-      return state, err
-    }
-    
-    // TODO: implement this case, then remove the fallthrough
-    fallthrough
-  case libvirt.DOMAIN_SHUTOFF:
-    
-    switch to {
-    case libvirt.DOMAIN_RUNNING:
-    
-    case libvirt.DOMAIN_PAUSED:
-  
-    case libvirt.DOMAIN_PMSUSPENDED:
-      
-    case libvirt.DOMAIN_SHUTOFF:
-      Logger.Debugf("Domain \"%s\" is already shutoff.", vm.Descriptor.Name)
-      return state, nil
-
-    default:
-      err = fmt.Errorf("Cannot start the transition of VM \"%s\" to state "+
-        "\"%s\". Target state is not allowed!", vm.Descriptor.Name,
-        GetStateString(to))
-      return state, err
-    }
-    
-    // TODO: implement this case, then remove the fallthrough
-    fallthrough
-    
+  // HANDLE ANY OTHER CASE -----------------------------------------------------
   default:
     err = fmt.Errorf("Illegal state of VM \"%s\": \"%s\".", vm.Descriptor.Name,
       GetStateString(state))
