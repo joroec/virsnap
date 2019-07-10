@@ -97,7 +97,7 @@ func createRun(cmd *cobra.Command, args []string) {
   }
   
   // a boolean indicating whether at least one error occured. Useful for
-  // the exit code of the program after iterating over the virtual machines
+  // the exit code of the program after iterating over the virtual machines.
   failed := false
   
   for _, vm := range(vms) {

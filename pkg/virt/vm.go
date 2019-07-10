@@ -31,6 +31,171 @@ func (vm *VM) Free() error {
   return vm.Instance.Free()
 }
 
+func (vm *VM) Transition(to libvirt.DomainState, forceShutdown bool, 
+    timeout int) (libvirt.DomainState, error)  {
+  
+  // check argument validity
+  if to != libvirt.DOMAIN_RUNNING && to != libvirt.DOMAIN_SHUTOFF &&
+      to != libvirt.DOMAIN_PMSUSPENDED && to != libvirt.DOMAIN_PAUSED {
+    err := fmt.Errorf("Cannot start the transition of VM \"%s\" to state "+
+      "\"%s\". Target state is not allowed!", vm.Descriptor.Name,
+      GetStateString(to))
+    return libvirt.DOMAIN_NOSTATE, err
+  }
+  
+  // get current state of virtual machine
+  state, _, err := vm.Instance.GetState()
+  if err != nil {
+    err = fmt.Errorf("Could not retrieve the state of the VM \"%s\"; "+
+      "Error was: %v", vm.Descriptor.Name, err)
+    return libvirt.DOMAIN_NOSTATE, err
+  }
+  
+  // outer switch: current state of VM, inner switch: target state of VM
+  switch state {
+  case libvirt.DOMAIN_RUNNING:
+    
+    switch to {
+    case libvirt.DOMAIN_RUNNING:
+      Logger.Debugf("Domain \"%s\" is already running.", vm.Descriptor.Name)
+      return state, nil
+    
+    case libvirt.DOMAIN_PAUSED:
+      Logger.Debugf("Suspending domain \"%s\".", vm.Descriptor.Name)
+      err = vm.Instance.Suspend()
+      if err != nil {
+        err = fmt.Errorf("Could not suspend the VM \"%s\"; Error was: %v",
+          vm.Descriptor.Name, err)
+        return state, err
+      }
+      return state, nil
+  
+    case libvirt.DOMAIN_PMSUSPENDED:
+      Logger.Debugf("PMSuspending domain \"%s\".", vm.Descriptor.Name)
+      err = vm.Instance.PMSuspendForDuration(libvirt.NODE_SUSPEND_TARGET_MEM,
+        0, 0)
+      if err != nil {
+        err = fmt.Errorf("Could not pmsuspend the VM \"%s\"; Error was: %v",
+          vm.Descriptor.Name, err)
+        return state, err
+      }
+      return state, nil
+      
+    case libvirt.DOMAIN_SHUTOFF:
+      Logger.Debugf("Trying to shutdown domain \"%s\" gracefully.",
+        vm.Descriptor.Name)
+      
+      round_seconds := 0.33 * float64(timeout*60)
+      new_state := libvirt.DOMAIN_RUNNING
+
+      // if the virtual machine seems to not react to the first shutdown
+      // request, repeatedly send further requests to gracefully shutdown
+      for i := 0; i < 3; i++ {
+        before := time.Now()
+        
+        Logger.Debugf("Sending shutdown request to VM \"%s\".",
+          vm.Descriptor.Name)
+        err = vm.Instance.Shutdown() // returns instantly
+        if err != nil {
+          // we need to cast to specific libvirt error, since the VM might
+          // be in a shutoff state since last check. If this is the case, we
+          // do not want to return an error!
+          lverr, ok := err.(libvirt.Error)
+          if ok && (lverr.Code == libvirt.ERR_OPERATION_INVALID ||
+              strings.Contains(lverr.Message, "domain is not running")) {
+            Logger.Debugf("VM \"%s\" was shutdown in the meantime.",
+              vm.Descriptor.Name)
+            return libvirt.DOMAIN_RUNNING, nil 
+          
+          } else {
+            err = fmt.Errorf("Could not initiate the shutdown request for "+
+              "VM \"%s\": %v", vm.Descriptor.Name, err)
+            return libvirt.DOMAIN_RUNNING, err
+          }
+        }
+        
+        Logger.Debugf("Waiting vor the VM \"%s\" to shutdown.", 
+          vm.Descriptor.Name)
+        for true {
+          
+          // sleep some seconds
+          time.Sleep(5 * time.Second)
+          
+          new_state, _, err = vm.Instance.GetState()
+          if err != nil {
+            err = fmt.Errorf("Could not re-retrieve the state of the VM "+
+              "\"%s\". Trying again...: %v", vm.Descriptor.Name, err)
+            Logger.Warn(err)
+          }
+          
+          if new_state == libvirt.DOMAIN_SHUTOFF {
+            return libvirt.DOMAIN_RUNNING, nil
+          }
+          
+          // if we waited longer since 33% of the timeout, try sending the
+          // shutdown request again
+          after := time.Now()
+          duration := after.Sub(before) // int64 nanosecods
+          max_round_duration := time.Duration(round_seconds)*time.Second
+          if duration > max_round_duration {
+            Logger.Debugf("Beginning next graceful shutdown round for VM "+
+              "\"%s\".", vm.Descriptor.Name)
+            break
+          }
+        }  
+      }
+      
+      // could not shutdown the VM gracefully, force?
+      if forceShutdown {
+        Logger.Debugf("Destroying the VM \"%s\" since it could not be "+
+          "shutdown gracefully.", vm.Descriptor.Name)
+        err = vm.Instance.Destroy()
+        if err != nil {
+          err = fmt.Errorf("Could not destroy the VM \"%s\": %v",
+            vm.Descriptor.Name, err)
+          return libvirt.DOMAIN_RUNNING, err
+        }
+        return libvirt.DOMAIN_RUNNING, nil
+        
+      } else {
+        err = fmt.Errorf("Could not shutdown the VM \"%s\"! State is now "+
+          "\"%s\"!", vm.Descriptor.Name, GetStateString(new_state))
+        return libvirt.DOMAIN_RUNNING, err
+      }
+      
+    default:
+      err = fmt.Errorf("Cannot start the transition of VM \"%s\" to state "+
+        "\"%s\". Target state is not allowed!", vm.Descriptor.Name,
+        GetStateString(to))
+      return state, err
+    }
+    
+  case libvirt.DOMAIN_BLOCKED:
+    // TODO: implement
+    fallthrough
+  case libvirt.DOMAIN_PAUSED:
+    // TODO: implement
+    fallthrough
+  case libvirt.DOMAIN_SHUTDOWN:
+    // TODO: implement
+    fallthrough
+  case libvirt.DOMAIN_CRASHED:
+    // TODO: implement
+    fallthrough
+  case libvirt.DOMAIN_PMSUSPENDED:
+    // TODO: implement
+    fallthrough
+  case libvirt.DOMAIN_SHUTOFF:
+    // TODO: implement
+    fallthrough
+  default:
+    err = fmt.Errorf("Illegal state of VM \"%s\": \"%s\".", vm.Descriptor.Name,
+      GetStateString(state))
+    return state, err
+  }
+  
+}
+
 // Shutdown tries to shutdown the VM on which the method is executed. Since a
 // virtual machine may hang or even ignore the request to shutdown gracefully,
 // you can specify (force parameter) wheter you want to force the shutdown
