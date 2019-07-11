@@ -146,3 +146,7 @@ export GOPATH=$HOME/.go-workspace
 ## License
 
 MIT License. See `LICENSE` file.
+
+## Authors
+
+See `AUTHORS` file.
