@@ -21,10 +21,10 @@ var Verbose bool
 // initializes the Logger accordingly if the verbose flag is set.
 var RootCmd = &cobra.Command{
   Use:   "virsnap",
-  Short: "virsnap is a small tool that eases the creation of KVM snapshots "+
-         "for backup purposes.",
-  Long:  "virsnap is a small tool that eases the creation of KVM snapshots "+
-         "for backup purposes.",
+  Short: "virsnap is a small tool that eases the automated creation and "+
+    "deletion of VM snapshots.",
+  Long:  "virsnap is a small tool that eases the automated creation and "+
+    "deletion of VM snapshots.",
   PersistentPreRun: initializeLogger,
 }
 

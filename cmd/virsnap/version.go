@@ -14,8 +14,8 @@ import (
 // versionCmd is a global variable defining the corresponding cobra command
 var versionCmd = &cobra.Command{
   Use:   "version",
-  Short: "Prints the version of the software.",
-  Long:  `Prints the version of the software.`,
+  Short: "Print the version of the software",
+  Long:  `Print the version of the software.`,
   Run: versionRun,
 }
 

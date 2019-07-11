@@ -1,30 +1,127 @@
 # virsnap
 
 virsnap is a CLI snapshot utility for libvirt. The small tool is designed for
-creating and automating snapshots of virtual machines (e.g. KVM domains). In
-addition to creating snapshots, the tool allows to automatically remove 
-deprecated snapshots with ease.
-
-## Example
-
-An example will follow later on.
+the automated creation of virtual machine snapshots (e.g. KVM domains). In
+addition to creating snapshots, the tool allows to remove expired snapshots if
+there are enough newer snapshots for this virtual machine.
 
 ## Usage
 
-Usage documentation will follow later on.
+```
+virsnap is a small tool that eases the automated creation and deletion of VM snapshots.
 
-```shell
-$ virsnap -h
+Usage:
+  virsnap [command]
+
+Available Commands:
+  clean       Remove expired snapshots from the system
+  create      Create a snapshot of one or more virtual machines
+  help        Help about any command
+  list        List snapshots of one or more virtual machines
+  version     Print the version of the software
+
+Flags:
+  -h, --help      help for virsnap
+  -v, --verbose   verbose output
+
+Use "virsnap [command] --help" for more information about a command.
+```
+
+### List snapshots
+
+```
+joroec@host:~ $ virsnap list "^examplevm[0-9]*$"
+examplevm1 (current state: DOMAIN_PAUSED, 1 snapshots total)
++------------------------+-------------------------------+---------+
+|        SNAPSHOT        |             TIME              |  STATE  |
++------------------------+-------------------------------+---------+
+| virsnap_heuristic_bose | Thu Jul 11 08:37:50 CEST 2019 | shutoff |
++------------------------+-------------------------------+---------+
+
+examplevm2 (current state: DOMAIN_RUNNING, 2 snapshots total)
++--------------------------+-------------------------------+---------+
+|         SNAPSHOT         |             TIME              |  STATE  |
++--------------------------+-------------------------------+---------+
+| virsnap_hardcore_galileo | Thu Jul 11 08:39:51 CEST 2019 | running |
+| virsnap_angry_hypatia    | Thu Jul 11 08:40:15 CEST 2019 | shutoff |
++--------------------------+-------------------------------+---------+
+```
+
+```
+joroec@host:~ $ virsnap list
+examplevm1 (current state: DOMAIN_SHUTOFF, 1 snapshots total)
++------------------------+-------------------------------+---------+
+|        SNAPSHOT        |             TIME              |  STATE  |
++------------------------+-------------------------------+---------+
+| virsnap_heuristic_bose | Thu Jul 11 08:37:50 CEST 2019 | shutoff |
++------------------------+-------------------------------+---------+
+
+examplevm2 (current state: DOMAIN_RUNNING, 2 snapshots total)
++--------------------------+-------------------------------+---------+
+|         SNAPSHOT         |             TIME              |  STATE  |
++--------------------------+-------------------------------+---------+
+| virsnap_hardcore_galileo | Thu Jul 11 08:39:51 CEST 2019 | running |
+| virsnap_angry_hypatia    | Thu Jul 11 08:40:15 CEST 2019 | shutoff |
++--------------------------+-------------------------------+---------+
+
+othervm1 (current state: DOMAIN_RUNNING, 1 snapshots total)
++-------------------------+-------------------------------+---------+
+|        SNAPSHOT         |             TIME              |  STATE  |
++-------------------------+-------------------------------+---------+
+| virsnap_gracious_turing | Thu Jul 11 09:05:36 CEST 2019 | shutoff |
++-------------------------+-------------------------------+---------+
+```
+
+### Create snapshots
+
+```
+joroec@host:~ $ virsnap create --shutdown --force --verbose "^examplevm2$"
+DEBU[0000] Trying to shutdown domain "examplevm2" gracefully. 
+DEBU[0000] Sending shutdown request to VM "examplevm2". 
+DEBU[0000] Waiting vor the VM "examplevm2" to shutdown. 
+DEBU[0065] Beginning creation of snapshot for VM "examplevm2". 
+INFO[0065] Created snapshot "virsnap_condescending_fermat" for VM "examplevm2". 
+DEBU[0065] Restoring previous state of vm "examplevm2"  
+DEBU[0066] Leaving creation of snapshot "virsnap_condescending_fermat" for VM "examplevm2".
+```
+
+### Remove expired snapshots
+
+The parameter `k` specified the versions to keep:
+
+```
+joroec@host:~ $ virsnap list "^examplevm2$"
+examplevm2 (current state: DOMAIN_RUNNING, 4 snapshots total)
++------------------------------+-------------------------------+---------+
+|           SNAPSHOT           |             TIME              |  STATE  |
++------------------------------+-------------------------------+---------+
+| virsnap_hardcore_galileo     | Thu Jul 11 08:39:51 CEST 2019 | running |
+| virsnap_angry_hypatia        | Thu Jul 11 08:40:15 CEST 2019 | shutoff |
+| virsnap_cranky_sammet        | Thu Jul 11 09:07:55 CEST 2019 | shutoff |
+| virsnap_condescending_fermat | Thu Jul 11 09:09:09 CEST 2019 | shutoff |
++------------------------------+-------------------------------+---------+
+
+
+joroec@host:~ $ virsnap clean -k 2 "^examplevm2$"
+INFO[0000] Removing snapshot "virsnap_hardcore_galileo" of VM "examplevm2". 
+INFO[0000] Removing snapshot "virsnap_angry_hypatia" of VM "examplevm2".
+
+
+joroec@host:~ $ virsnap list "^examplevm2$"
+examplevm2 (current state: DOMAIN_RUNNING, 2 snapshots total)
++------------------------------+-------------------------------+---------+
+|           SNAPSHOT           |             TIME              |  STATE  |
++------------------------------+-------------------------------+---------+
+| virsnap_cranky_sammet        | Thu Jul 11 09:07:55 CEST 2019 | shutoff |
+| virsnap_condescending_fermat | Thu Jul 11 09:09:09 CEST 2019 | shutoff |
++------------------------------+-------------------------------+---------+
+
 ```
 
 ## Dependencies
 
-virsnap needs go 1.12+.
-
-virsnap uses `vgo` for dependency management. For golang version 1.10 and
-lower, `vgo` can be installed as an external tool. As of golang version 1.11,
-`vgo` was merged into the golang main tree. For more information on `vgo`, see
-the corresponding [vgo documentation].
+virsnap needs go 1.12+ and uses `vgo` for dependency management. For more 
+information on `vgo`, see the corresponding [vgo documentation].
 
 [vgo documentation]: https://research.swtch.com/vgo-tour
 
@@ -47,8 +144,6 @@ sudo rm /usr/local/bin/virsnap
 ```
 
 ## Community, discussion, contribution, and support
-
-## FAQ
 
 ### How do I install golang 1.12?
 
@@ -117,7 +212,7 @@ system:
 
 ```shell
 cd ../../
-sudo cp go /usr/local/lib/go
+sudo cp -r go /usr/local/lib/go
 sudo ln -s /usr/local/lib/go/bin/go /usr/local/bin/go
 sudo ln -s /usr/local/lib/go/bin/gofmt /usr/local/bin/gofmt
 ```

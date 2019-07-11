@@ -554,6 +554,30 @@ func ListMatchingVMs(regexes []string) ([]VM, error) {
   return matched_vms, nil
 }
 
+// -----------------------------------------------------------------------------
+
+// TODO: documentation
+type VMSorter struct {
+  VMs *[]VM
+}
+
+// TODO: documentation
+func (s *VMSorter) Len() int {
+  return len(*s.VMs)
+}
+
+// TODO: documentation
+func (s *VMSorter) Less(i int, j int) bool {
+  return (*s.VMs)[i].Descriptor.Name < (*s.VMs)[j].Descriptor.Name
+}
+
+// TODO: documentation
+func (s *VMSorter) Swap(i int, j int) {
+  (*s.VMs)[i], (*s.VMs)[j] = (*s.VMs)[j], (*s.VMs)[i]
+}
+
+// -----------------------------------------------------------------------------
+
 // FreeVMs is a function that takes a slice of VMs and frees any associated 
 // libvirt.Domain. Usually, this is called after ListMatchingVMs with a 
 // "defer" statement.

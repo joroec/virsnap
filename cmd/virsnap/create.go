@@ -30,7 +30,7 @@ var timeout int
 // createCmd is a global variable defining the corresponding cobra command
 var createCmd = &cobra.Command{
   Use:   "create <regex1> [<regex2>] [<regex3>] ...",
-  Short: "Creates a snapshot of one or more KVM virtual machines",
+  Short: "Create a snapshot of one or more virtual machines",
   Long:  "Create a new snapshot for any found virtual machine with a name "+
     "matching at least one of the given regular expressions. For example, "+
     "'virsnap create \".*\"' creates a new snapshot for all found virtual "+

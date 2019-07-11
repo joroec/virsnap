@@ -19,8 +19,8 @@ var keepVersions int
 // cleanCmd is a global variable defining the corresponding cobra command
 var cleanCmd = &cobra.Command{
   Use:   "clean -k <keep> <regex1> [<regex2>] [<regex3>] ...",
-  Short: "Removes deprecated snapshots from the system.",
-  Long:  "Removes deprecated snapshots from the system. The parameter k "+
+  Short: "Remove expired snapshots from the system",
+  Long:  "Remove expired snapshots from the system. The parameter k "+
     "specifies how many successive snapshots of a VM should be kept before "+
     "beginning to remove the old ones. For example, if you take a snapshot "+
     "every day over a time of 30 days and then call clean with an k of 15, "+
