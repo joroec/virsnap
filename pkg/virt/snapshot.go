@@ -25,15 +25,21 @@ type Snapshot struct {
   Descriptor libvirtxml.DomainSnapshot
 }
 
-// TODO: add documentation
+// Free is a convenience method for calling Free on the corresponding libvirt
+// Snapshot instance.
 func (s *Snapshot) Free() error {
   return s.Instance.Free()
 }
 
 // -----------------------------------------------------------------------------
 
-// TODO: add documentation
-// returns sorted increasingly accoriding to SnapshotCreation data
+// ListMatchingSnapshots is a method that allows to retrieve information about
+// virtual machine snapshots hat can be accessed via libvirt. The first
+// parameter specifies a slice of regular expressions. Only snapshots of virtual
+// machines whose name matches at least one of the regular expressions are
+// returned. The caller is responsible for calling FreeSnapshots on the
+// returned slice to free any buffer in libvirt. The returned snapshots
+// are sorted by creation time.
 func (vm *VM) ListMatchingSnapshots(regexes []string) ([]Snapshot, error) {
   // argument validity checking
   exprs := make([]*regexp.Regexp, 0, len(regexes))
@@ -184,23 +190,20 @@ func (vm *VM) CreateSnapshot(prefix string, description string) (Snapshot,
 
 // -----------------------------------------------------------------------------
 
-// TODO: documentation
+// SnapshotSorter is a sorter for sorting snapshots by creation date.
 type SnapshotSorter struct {
   Snapshots *[]Snapshot
 }
 
-// TODO: documentation
 func (s *SnapshotSorter) Len() int {
   return len(*s.Snapshots)
 }
 
-// TODO: documentation
 func (s *SnapshotSorter) Less(i int, j int) bool {
   return (*s.Snapshots)[i].Descriptor.CreationTime < 
     (*s.Snapshots)[j].Descriptor.CreationTime
 }
 
-// TODO: documentation
 func (s *SnapshotSorter) Swap(i int, j int) {
   (*s.Snapshots)[i], (*s.Snapshots)[j] = 
     (*s.Snapshots)[j], (*s.Snapshots)[i]

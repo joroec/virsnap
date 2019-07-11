@@ -10,6 +10,7 @@ import (
   "fmt"
   "regexp"
   "time"
+  "sort"
   "strings"
   
   "github.com/libvirt/libvirt-go"
@@ -398,7 +399,8 @@ func (vm *VM) Transition(to libvirt.DomainState, forceShutdown bool,
   
   // HANDLE BLOCKED VM ---------------------------------------------------------
   case libvirt.DOMAIN_BLOCKED:
-    // TODO: What exactly is a blocked VM? Cannot find any documentation.
+    // TODO: What exactly is a blocked VM? Cannot find any documentation. Tell
+    // me, if you find some...
     // Wait for the VM to not be blocked anymore and then execute the given
     // transition.
     Logger.Debugf("Waiting vor the VM \"%s\" to not be blocked anymore.", 
@@ -459,12 +461,12 @@ func (vm *VM) Transition(to libvirt.DomainState, forceShutdown bool,
 
 // -----------------------------------------------------------------------------
 
-// ListMatchingVMs is a function that allows to retrieve information about
+// ListMatchingVMs is a method that allows to retrieve information about
 // virtual machines that can be accessed via libvirt. The first parameter
 // specifies a slice of regular expressions. Only virtual machines whose name
 // matches at least one of the regular expressions are returned. The caller is
 // responsible for calling FreeVMs on the returned slice to free any
-// buffer in libvirt.
+// buffer in libvirt. The returned VMs are sorted lexically by name.
 func ListMatchingVMs(regexes []string) ([]VM, error) {
   // argument validity checking
   exprs := make([]*regexp.Regexp, 0, len(regexes))
@@ -551,27 +553,30 @@ func ListMatchingVMs(regexes []string) ([]VM, error) {
     }
   }
   
+  // sort the VMs according to the name increasingly
+  sorter := VMSorter{
+    VMs: &matched_vms,
+  }
+  sort.Sort(&sorter)
+  
   return matched_vms, nil
 }
 
 // -----------------------------------------------------------------------------
 
-// TODO: documentation
+// VMSorter is a sorter for sorting snapshots by name lexically.
 type VMSorter struct {
   VMs *[]VM
 }
 
-// TODO: documentation
 func (s *VMSorter) Len() int {
   return len(*s.VMs)
 }
 
-// TODO: documentation
 func (s *VMSorter) Less(i int, j int) bool {
   return (*s.VMs)[i].Descriptor.Name < (*s.VMs)[j].Descriptor.Name
 }
 
-// TODO: documentation
 func (s *VMSorter) Swap(i int, j int) {
   (*s.VMs)[i], (*s.VMs)[j] = (*s.VMs)[j], (*s.VMs)[i]
 }

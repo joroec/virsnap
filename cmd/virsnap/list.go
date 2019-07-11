@@ -9,7 +9,6 @@ import (
   "fmt"
   "os"
   "time"
-  "sort"
   "strconv"
   
   log "github.com/sirupsen/logrus"
@@ -75,12 +74,6 @@ func listRun(cmd *cobra.Command, args []string) {
       "expression(s).")
     return
   }
-  
-  // sort the VMs according to the name increasingly
-  sorter := virt.VMSorter{
-    VMs: &vms,
-  }
-  sort.Sort(&sorter)
   
   // iterate over the VMs and output the gathered information
   for index, vm := range(vms) {
