@@ -6,6 +6,11 @@
 package cmd
 
 import (
+  "bufio"
+  "fmt"
+  "os"
+  "strings"
+  
   "github.com/spf13/cobra"
   
   "github.com/joroec/virsnap/pkg/virt"
@@ -16,9 +21,13 @@ import (
 // of the VM should be kept before beginning to remove the old ones.
 var keepVersions int
 
+// assumeYes is a global variable determing whether snapshots should be deleted
+// without additional confirmation.
+var assumeYes bool
+
 // cleanCmd is a global variable defining the corresponding cobra command
 var cleanCmd = &cobra.Command{
-  Use:   "clean -k <keep> <regex1> [<regex2>] [<regex3>] ...",
+  Use:   "clean [-y] -k <keep> <regex1> [<regex2>] [<regex3>] ...",
   Short: "Remove expired snapshots from the system",
   Long:  "Remove expired snapshots from the system. The parameter k "+
     "specifies how many successive snapshots of a VM should be kept before "+
@@ -42,6 +51,10 @@ func init() {
     "version to keep before begin cleaning. (required)")
   cleanCmd.MarkFlagRequired("keep")
 
+  cleanCmd.Flags().BoolVarP(&assumeYes, "assume-yes", "y", false, "Do not ask "+
+    "for additional confirmation when about to remove a snapshot. Useful for "+
+    "automated execution.")
+
   // add command to root command so that cobra works as expected
   RootCmd.AddCommand(cleanCmd)
 }
@@ -64,6 +77,11 @@ func cleanRun(cmd *cobra.Command, args []string) {
     log.Info("There were no virtual machines matchig the given regular "+
       "expression(s).")
     return
+  }
+  log.Debugf("Found %d matching VMs.", len(vms))
+  
+  if assumeYes {
+    log.Debugf("Remove snapshots without any further confirmation.")
   }
   
   // a boolean indicating whether at least one error occured. Useful for
@@ -91,16 +109,31 @@ func cleanRun(cmd *cobra.Command, args []string) {
         // iterate over the snapshot exceeding the k snapshots that should
         // remain
         for i := 0; i < len(snapshots)-keepVersions; i++ {
-          log.Infof("Removing snapshot \"%s\" of VM \"%s\".",
+          log.Infof("About to remove snapshot \"%s\" of VM \"%s\".",
             snapshots[i].Descriptor.Name, vm.Descriptor.Name)
           
-          err = snapshots[i].Instance.Delete(0)
-          if err != nil {
-            log.Errorf("Could not remove snapshot \"%s\" of VM \"%s\". "+
-              "Skipping this VM: %v", snapshots[i].Descriptor.Name,
-              vm.Descriptor.Name, err)
-            failed = true
-            return // we are in an anonymous function
+          accepted := false
+          if assumeYes {
+            accepted = true
+          } else {
+            accepted = confirm("Remove snapshot?", 10)
+          }
+          
+          if accepted {
+            log.Infof("Removing snapshot \"%s\" of VM \"%s\".",
+              snapshots[i].Descriptor.Name, vm.Descriptor.Name)
+            
+            err = snapshots[i].Instance.Delete(0)
+            if err != nil {
+              log.Errorf("Could not remove snapshot \"%s\" of VM \"%s\". "+
+                "Skipping this VM: %v", snapshots[i].Descriptor.Name,
+                vm.Descriptor.Name, err)
+              failed = true
+              return // we are in an anonymous function
+            }
+          } else {
+            log.Infof("Skipping removal of snapshot \"%s\" of VM \"%s\".",
+              snapshots[i].Descriptor.Name, vm.Descriptor.Name)
           }
         }
     }()
@@ -109,4 +142,30 @@ func cleanRun(cmd *cobra.Command, args []string) {
   if failed {
     log.Fatal("There were some errors during the clean process.")
   }
+}
+
+// confirm displays a prompt `s` to the user and returns a bool indicating
+// yes / no. If the lowercased, trimmed input begins with anything other than
+// 'y', it returns false. It accepts an int `tries` representing the number of
+// attempts before returning false
+func confirm(s string, tries int) bool {
+	r := bufio.NewReader(os.Stdin)
+
+	for ; tries > 0; tries-- {
+		fmt.Printf("%s [y/n]: ", s)
+
+		res, err := r.ReadString('\n')
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		// Empty input (i.e. "\n")
+		if len(res) < 2 {
+			continue
+		}
+
+		return strings.ToLower(strings.TrimSpace(res))[0] == 'y'
+	}
+
+	return false
 }

@@ -87,7 +87,7 @@ DEBU[0066] Leaving creation of snapshot "virsnap_condescending_fermat" for VM "e
 
 ### Remove expired snapshots
 
-The parameter `k` specified the versions to keep:
+The parameter `k` specifies the versions to keep:
 
 ```
 joroec@host:~ $ virsnap list "^examplevm2$"
@@ -102,7 +102,7 @@ examplevm2 (current state: DOMAIN_RUNNING, 4 snapshots total)
 +------------------------------+-------------------------------+---------+
 
 
-joroec@host:~ $ virsnap clean -k 2 "^examplevm2$"
+joroec@host:~ $ virsnap clean -y -k 2 "^examplevm2$"
 INFO[0000] Removing snapshot "virsnap_hardcore_galileo" of VM "examplevm2". 
 INFO[0000] Removing snapshot "virsnap_angry_hypatia" of VM "examplevm2".
 
