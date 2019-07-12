@@ -94,8 +94,8 @@ func (vm *VM) Transition(to libvirt.DomainState, forceShutdown bool,
       Logger.Debugf("Trying to shutdown domain \"%s\" gracefully.",
         vm.Descriptor.Name)
       
-      round_seconds := 0.33 * float64(timeout*60)
-      new_state := libvirt.DOMAIN_RUNNING
+      roundSeconds := 0.33 * float64(timeout*60)
+      newState := libvirt.DOMAIN_RUNNING
 
       // if the virtual machine seems to not react to the first shutdown
       // request, repeatedly send further requests to gracefully shutdown
@@ -116,11 +116,12 @@ func (vm *VM) Transition(to libvirt.DomainState, forceShutdown bool,
               vm.Descriptor.Name)
             return libvirt.DOMAIN_RUNNING, nil 
           
-          } else {
-            err = fmt.Errorf("Could not initiate the shutdown request for "+
-              "VM \"%s\": %v", vm.Descriptor.Name, err)
-            return libvirt.DOMAIN_RUNNING, err
           }
+          
+          err = fmt.Errorf("Could not initiate the shutdown request for "+
+            "VM \"%s\": %v", vm.Descriptor.Name, err)
+          return libvirt.DOMAIN_RUNNING, err
+          
         }
         
         Logger.Debugf("Waiting vor the VM \"%s\" to shutdown.", 
@@ -128,14 +129,14 @@ func (vm *VM) Transition(to libvirt.DomainState, forceShutdown bool,
         for true {
           time.Sleep(5 * time.Second)
           
-          new_state, _, err = vm.Instance.GetState()
+          newState, _, err = vm.Instance.GetState()
           if err != nil {
             err = fmt.Errorf("Could not re-retrieve the state of the VM "+
               "\"%s\". Trying again...: %v", vm.Descriptor.Name, err)
             Logger.Warn(err)
           }
           
-          if new_state == libvirt.DOMAIN_SHUTOFF {
+          if newState == libvirt.DOMAIN_SHUTOFF {
             return libvirt.DOMAIN_RUNNING, nil
           }
           
@@ -143,8 +144,8 @@ func (vm *VM) Transition(to libvirt.DomainState, forceShutdown bool,
           // shutdown request again
           after := time.Now()
           duration := after.Sub(before) // int64 nanosecods
-          max_round_duration := time.Duration(round_seconds)*time.Second
-          if duration > max_round_duration {
+          maxRoundDuration := time.Duration(roundSeconds)*time.Second
+          if duration > maxRoundDuration {
             Logger.Debugf("Beginning next graceful shutdown round for VM "+
               "\"%s\".", vm.Descriptor.Name)
             break
@@ -164,11 +165,11 @@ func (vm *VM) Transition(to libvirt.DomainState, forceShutdown bool,
         }
         return libvirt.DOMAIN_RUNNING, nil
         
-      } else {
-        err = fmt.Errorf("Could not shutdown the VM \"%s\"! State is now "+
-          "\"%s\"!", vm.Descriptor.Name, GetStateString(new_state))
-        return libvirt.DOMAIN_RUNNING, err
       }
+      
+      err = fmt.Errorf("Could not shutdown the VM \"%s\"! State is now "+
+        "\"%s\"!", vm.Descriptor.Name, GetStateString(newState))
+      return libvirt.DOMAIN_RUNNING, err
       
     default:
       err = fmt.Errorf("Cannot start the transition of VM \"%s\" to state "+
@@ -241,14 +242,14 @@ func (vm *VM) Transition(to libvirt.DomainState, forceShutdown bool,
       for true {
         time.Sleep(5 * time.Second)
         
-        new_state, _, err := vm.Instance.GetState()
+        newState, _, err := vm.Instance.GetState()
         if err != nil {
           err = fmt.Errorf("Could not re-retrieve the state of the VM "+
             "\"%s\". Trying again...: %v", vm.Descriptor.Name, err)
           Logger.Warn(err)
         }
         
-        if new_state == libvirt.DOMAIN_SHUTOFF {
+        if newState == libvirt.DOMAIN_SHUTOFF {
           // returning shutoff, since this will be the future state of the VM.
           // A caller should assume this as previous state, since the VM would
           // have entered the shutoff state without any further intervention.
@@ -269,39 +270,40 @@ func (vm *VM) Transition(to libvirt.DomainState, forceShutdown bool,
       // have entered the shutoff state without any further intervention.
       return libvirt.DOMAIN_SHUTOFF, nil
       
-    } else {
-      // First Transition: Wait for the VM to be shutoff
-      prev, err := vm.Transition(libvirt.DOMAIN_SHUTOFF, forceShutdown, timeout)
-      if err != nil {
-        // return shutoff, since the VM reaches this state without any further
-        // intervention.
-        return libvirt.DOMAIN_SHUTOFF, err
-      }
-      
-      if prev != state && prev != libvirt.DOMAIN_SHUTOFF {
-        Logger.Warnf("State of VM \"%s\" has changed in the meantime. Was "+
-          "\"%s\", now it is \"%s\"!", vm.Descriptor.Name,
-          GetStateString(state), GetStateString(prev))
-      }
-      
-      // Second Transition: Transition to the acutal target state
-      prev, err = vm.Transition(to, forceShutdown, timeout)
-      if err != nil {
-        // return shutoff, since the VM reaches this state without any further
-        // intervention.
-        return libvirt.DOMAIN_SHUTOFF, err
-      }
-      
-      if prev != libvirt.DOMAIN_SHUTOFF {
-        Logger.Warnf("State of VM \"%s\" has changed in the meantime. Was "+
-          "\"%s\", now it is \"%s\"!", vm.Descriptor.Name,
-          GetStateString(state), GetStateString(prev))
-      }
-      
+    }
+    
+    // In any other case: First Transition: Wait for the VM to be shutoff
+    prev, err := vm.Transition(libvirt.DOMAIN_SHUTOFF, forceShutdown, timeout)
+    if err != nil {
       // return shutoff, since the VM reaches this state without any further
       // intervention.
-      return libvirt.DOMAIN_SHUTOFF, nil
+      return libvirt.DOMAIN_SHUTOFF, err
     }
+    
+    if prev != state && prev != libvirt.DOMAIN_SHUTOFF {
+      Logger.Warnf("State of VM \"%s\" has changed in the meantime. Was "+
+        "\"%s\", now it is \"%s\"!", vm.Descriptor.Name,
+        GetStateString(state), GetStateString(prev))
+    }
+    
+    // Second Transition: Transition to the acutal target state
+    prev, err = vm.Transition(to, forceShutdown, timeout)
+    if err != nil {
+      // return shutoff, since the VM reaches this state without any further
+      // intervention.
+      return libvirt.DOMAIN_SHUTOFF, err
+    }
+    
+    if prev != libvirt.DOMAIN_SHUTOFF {
+      Logger.Warnf("State of VM \"%s\" has changed in the meantime. Was "+
+        "\"%s\", now it is \"%s\"!", vm.Descriptor.Name,
+        GetStateString(state), GetStateString(prev))
+    }
+    
+    // return shutoff, since the VM reaches this state without any further
+    // intervention.
+    return libvirt.DOMAIN_SHUTOFF, nil
+    
   
   // HANDLE PAUSED VM ----------------------------------------------------------
   case libvirt.DOMAIN_PAUSED:
@@ -409,21 +411,21 @@ func (vm *VM) Transition(to libvirt.DomainState, forceShutdown bool,
     for true {
       time.Sleep(5 * time.Second)
       
-      new_state, _, err := vm.Instance.GetState()
+      newState, _, err := vm.Instance.GetState()
       if err != nil {
         err = fmt.Errorf("Could not re-retrieve the state of the VM "+
           "\"%s\". Trying again...: %v", vm.Descriptor.Name, err)
         Logger.Warn(err)
       }
       
-      if new_state != libvirt.DOMAIN_BLOCKED {
+      if newState != libvirt.DOMAIN_BLOCKED {
         // Execute Transition to the acutal target state
         prev, err := vm.Transition(to, forceShutdown, timeout)
         if err != nil {
           return state, err
         }
         
-        if prev != new_state {
+        if prev != newState {
           Logger.Warnf("State of VM \"%s\" has changed in the meantime. Was "+
             "\"%s\", now it is \"%s\"!", vm.Descriptor.Name,
             GetStateString(state), GetStateString(prev))
@@ -452,7 +454,7 @@ func (vm *VM) Transition(to libvirt.DomainState, forceShutdown bool,
     
   // HANDLE ANY OTHER CASE -----------------------------------------------------
   default:
-    err = fmt.Errorf("Illegal state of VM \"%s\": \"%s\".", vm.Descriptor.Name,
+    err = fmt.Errorf("Illegal state of VM \"%s\": \"%s\"", vm.Descriptor.Name,
       GetStateString(state))
     return state, err
   }
@@ -481,7 +483,7 @@ func ListMatchingVMs(regexes []string) ([]VM, error) {
   }
   
   if len(exprs) == 0 {
-    return nil, fmt.Errorf("No regular expression was specified.")
+    return nil, fmt.Errorf("No regular expression was specified")
   }
   
   // trying to connect to QEMU socket...
@@ -505,7 +507,7 @@ func ListMatchingVMs(regexes []string) ([]VM, error) {
   
   // loop over the virtual machines and check for a match with the given
   // regular expressions
-  matched_vms := make([]VM, 0, len(instances))
+  matchedVMs := make([]VM, 0, len(instances))
   for _, instance := range instances {
     
     // retrieve and unmarshal the descriptor of the VM
@@ -538,11 +540,11 @@ func ListMatchingVMs(regexes []string) ([]VM, error) {
     if found {
       // the caller is responsible for calling domain.Free() on the returned
       // domains
-      matched_vm := VM{
+      matchedVM := VM{
         Instance: instance,
         Descriptor: descriptor,
       }
-      matched_vms = append(matched_vms, matched_vm)
+      matchedVMs = append(matchedVMs, matchedVM)
     } else {
       // we do not need the instance here anymore
       err = instance.Free()
@@ -555,11 +557,11 @@ func ListMatchingVMs(regexes []string) ([]VM, error) {
   
   // sort the VMs according to the name increasingly
   sorter := VMSorter{
-    VMs: &matched_vms,
+    VMs: &matchedVMs,
   }
   sort.Sort(&sorter)
   
-  return matched_vms, nil
+  return matchedVMs, nil
 }
 
 // -----------------------------------------------------------------------------

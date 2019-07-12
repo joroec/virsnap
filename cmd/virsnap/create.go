@@ -106,9 +106,9 @@ func createRun(cmd *cobra.Command, args []string) {
   
   for _, vm := range(vms) {
     // iterate over the domains and crete a new snapshot for each of it
-    former_state := libvirt.DOMAIN_NOSTATE
+    formerState := libvirt.DOMAIN_NOSTATE
     if(shutdown) {
-      former_state, err = vm.Transition(libvirt.DOMAIN_SHUTOFF, force, timeout)
+      formerState, err = vm.Transition(libvirt.DOMAIN_SHUTOFF, force, timeout)
       if err != nil {
         log.Error(err)
         failed = true
@@ -136,13 +136,13 @@ func createRun(cmd *cobra.Command, args []string) {
       
       if shutdown {
         log.Debugf("Restoring previous state of vm \"%s\"", vm.Descriptor.Name)
-        _, err = vm.Transition(former_state, force, timeout)
+        _, err = vm.Transition(formerState, force, timeout)
         if err != nil {
           log.Errorf("Could not restore the state \"%s\" of VM \"%s\".",
-            virt.GetStateString(former_state), vm.Descriptor.Name)
+            virt.GetStateString(formerState), vm.Descriptor.Name)
           failed = true
           
-          new_state, err :=  vm.GetCurrentStateString()
+          newState, err :=  vm.GetCurrentStateString()
           if err != nil {
             log.Errorf("Could not retrieve the current state of the VM %s: %v ",
               vm.Descriptor.Name, err)
@@ -150,7 +150,7 @@ func createRun(cmd *cobra.Command, args []string) {
           }
           
           log.Errorf("Sate of VM \"%s\" is now \"%s\".", vm.Descriptor.Name,
-            new_state)
+            newState)
           return  // we are in an anonymous function
         }
       }

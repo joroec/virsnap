@@ -109,13 +109,13 @@ func listRun(cmd *cobra.Command, args []string) {
     for _, snapshot := range(snapshots) {
       
       // convert timestamp to human-readable format
-      time_i, err := strconv.ParseInt(snapshot.Descriptor.CreationTime, 10, 64)
+      timeInt, err := strconv.ParseInt(snapshot.Descriptor.CreationTime, 10, 64)
       if err != nil {
         log.Errorf("Could not convert the snapshot creation time of VM %s. "+
           "Skipping VM: %v", vm.Descriptor.Name, err)
         continue
       }
-      time := time.Unix(time_i, 0)
+      time := time.Unix(timeInt, 0)
       
       // append the table row for this snapshot
       table.Append([]string{snapshot.Descriptor.Name, 

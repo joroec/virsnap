@@ -54,7 +54,7 @@ func (vm *VM) ListMatchingSnapshots(regexes []string) ([]Snapshot, error) {
   }
   
   if len(exprs) == 0 {
-    return nil, fmt.Errorf("No regular expression was specified.")
+    return nil, fmt.Errorf("No regular expression was specified")
   }
   
   // retrieve all snapshots from libvirt
@@ -65,7 +65,7 @@ func (vm *VM) ListMatchingSnapshots(regexes []string) ([]Snapshot, error) {
     return nil, err
   }
   
-  matched_snapshots := make([]Snapshot, 0, len(instances))
+  matchedSnapshots := make([]Snapshot, 0, len(instances))
   
   // loop over the snapshots and check for a match with the given
   // regular expressions
@@ -101,11 +101,11 @@ func (vm *VM) ListMatchingSnapshots(regexes []string) ([]Snapshot, error) {
     if found {
       // the caller is responsible for calling domain.Free() on the returned
       // domains
-      matched_snapshot := Snapshot{
+      matchedSnapshot := Snapshot{
         Instance: instance,
         Descriptor: descriptor,
       }
-      matched_snapshots = append(matched_snapshots, matched_snapshot)
+      matchedSnapshots = append(matchedSnapshots, matchedSnapshot)
     } else {
       // we do not need the instance here anymore
       err = instance.Free()
@@ -119,11 +119,11 @@ func (vm *VM) ListMatchingSnapshots(regexes []string) ([]Snapshot, error) {
   
   // sort the snapshots according to their creation date increasingly
   sorter := SnapshotSorter{
-    Snapshots: &matched_snapshots,
+    Snapshots: &matchedSnapshots,
   }
   sort.Sort(&sorter)
   
-  return matched_snapshots, nil
+  return matchedSnapshots, nil
 }
 
 // FreeSnapshots is a function that takes a slice of snapshots and frees any
@@ -170,14 +170,14 @@ func (vm *VM) CreateSnapshot(prefix string, description string) (Snapshot,
   // create the snapshot with the given name
   xml, err := descriptor.Marshal()
   if err != nil {
-    err = fmt.Errorf("Could not marshal the snapshot xml for VM \"%s\".", 
+    err = fmt.Errorf("Could not marshal the snapshot xml for VM \"%s\"", 
       vm.Descriptor.Name, err)
     return Snapshot{}, err
   }
   
   snapshot, err := vm.Instance.CreateSnapshotXML(xml, 0)
   if err != nil {
-    err = fmt.Errorf("Could not create the snapshot for the VM \"%s\".",
+    err = fmt.Errorf("Could not create the snapshot for the VM \"%s\"",
       vm.Descriptor.Name)
     return Snapshot{}, err
   }

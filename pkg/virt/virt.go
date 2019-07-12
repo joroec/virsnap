@@ -12,7 +12,7 @@ import (
   "github.com/sirupsen/logrus"
 )
 
-// Log is the logrus object that is used of this package to print warning
+// Logger is the logrus object that is used of this package to print warning
 // messages on the console. The default Logger is configured to use stdout for
 // logging and sets a default level of Info. If you want to disable the logging
 // output of this package, you need to set a member of the Logger from your
