@@ -1,0 +1,21 @@
+# Copyright (c) 2019 The virnsnap authors. See file "AUTHORS".
+# Licensed under the MIT License. You have obtained a copy of the License at
+# the "LICENSE" file in this repository.
+# This directory contains files for automatically starting virnsnap via systemd.
+
+[Unit]
+Description=A CLI snapshot systemd service for libvirt
+
+# Behavior of oneshot is similar to simple; however, the service manager will
+# consider the unit started after the main process exits. It will then start
+# follow-up units. RemainAfterExit= is particularly useful for this type of
+# service. Type=oneshot is the implied default if neither Type= nor ExecStart=
+# are specified.
+[Service]
+Type=oneshot
+
+# Create a new snapshot of any VM when the VM is shutoff.
+ExecStart=/usr/local/bin/virsnap create --shutdown --force --verbose "^.*$"
+
+# Clean expired snapshots.
+ExecStart=/usr/local/bin/virsnap clean --keep 30 --assume-yes --verbose "^.*$"

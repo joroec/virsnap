@@ -1,0 +1,22 @@
+# Copyright (c) 2019 The virnsnap authors. See file "AUTHORS".
+# Licensed under the MIT License. You have obtained a copy of the License at
+# the "LICENSE" file in this repository.
+# This directory contains files for automatically starting virnsnap via systemd.
+
+[Unit]
+Description=Description=A CLI snapshot systemd timer for libvirt
+
+[Timer]
+# Defines realtime (i.e. wallclock) timers with calendar event expressions. See
+# systemd.time(7) for more information on the syntax of calendar event
+# expressions. Otherwise, the semantics are similar to OnActiveSec= and related
+# settings. Note that timers do not necessarily expire at the precise time
+# configured with this setting, as it is subject to the AccuracySec= setting
+# below. May be specified more than once, in which case the timer unit will
+# trigger whenever any of the specified expressions elapse. Moreover calendar
+# timers and monotonic timers (see above) may be combined within the same timer
+# unit. If the empty string is assigned to any of these options, the list of
+# timers is reset (both OnCalendar= timers and monotonic timers, see above), and
+# all prior assignments will have no effect.
+# Execute virsnap every day at 4am.
+OnCalendar=*-*-* 04:00:00
