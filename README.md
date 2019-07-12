@@ -120,10 +120,10 @@ examplevm2 (current state: DOMAIN_RUNNING, 2 snapshots total)
 
 ## Dependencies
 
-virsnap needs go 1.12+ and uses `vgo` for dependency management. For more 
-information on `vgo`, see the corresponding [vgo documentation].
+virsnap needs go 1.12+ and uses `go modules` for dependency management. For more 
+information on `go modules`, see the corresponding [go modules documentation].
 
-[vgo documentation]: https://research.swtch.com/vgo-tour
+[go modules documentation]: https://github.com/golang/go/wiki/Modules
 
 ## Installation
 
