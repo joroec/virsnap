@@ -127,7 +127,21 @@ information on `go modules`, see the corresponding [go modules documentation].
 
 ## Installation
 
+First make sure libvirt is installed. You can use your local packet manager or [compile](https://libvirt.org/compiling.html) it by yourself.
+
+On Ubuntu, you can use apt:
+```shell
+sudo apt-get install libvirt-bin libvirt-dev
+```
+
+On macOS, you can use Homebrew:
+
+```shell
+brew install libvirt
+```
+
 To install virsnap, execute the following in your shell:
+
 ```shell
 git clone http://github.com/joroec/virsnap
 cd virsnap
@@ -139,6 +153,7 @@ This will compile and link the virsnap binary and install it into
 `/usr/local/bin/virsnap`. No other file is installed in system directories.
 
 To remove the tool from your system, execute the following in your shell:
+
 ```shell
 sudo rm /usr/local/bin/virsnap
 ```
