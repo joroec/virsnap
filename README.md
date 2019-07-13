@@ -127,9 +127,14 @@ information on `go modules`, see the corresponding [go modules documentation].
 
 ## Installation
 
-First make sure libvirt is [installed](https://libvirt.org/compiling.html).
+First make sure libvirt is installed. You can use your local packet manager or [compile](https://libvirt.org/compiling.html) it by yourself.
 
-On macOS use Homebrew:
+On Ubuntu, you can use apt:
+```shell
+sudo apt-get install libvirt-bin libvirt-dev
+```
+
+On macOS, you can use Homebrew:
 
 ```shell
 brew install libvirt
