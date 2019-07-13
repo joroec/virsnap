@@ -76,12 +76,12 @@ othervm1 (current state: DOMAIN_RUNNING, 1 snapshots total)
 
 ```
 joroec@host:~ $ virsnap create --shutdown --force --verbose "^examplevm2$"
-DEBU[0000] Trying to shutdown domain "examplevm2" gracefully. 
-DEBU[0000] Sending shutdown request to VM "examplevm2". 
-DEBU[0000] Waiting vor the VM "examplevm2" to shutdown. 
-DEBU[0065] Beginning creation of snapshot for VM "examplevm2". 
-INFO[0065] Created snapshot "virsnap_condescending_fermat" for VM "examplevm2". 
-DEBU[0065] Restoring previous state of vm "examplevm2"  
+DEBU[0000] Trying to shutdown domain "examplevm2" gracefully.
+DEBU[0000] Sending shutdown request to VM "examplevm2".
+DEBU[0000] Waiting vor the VM "examplevm2" to shutdown.
+DEBU[0065] Beginning creation of snapshot for VM "examplevm2".
+INFO[0065] Created snapshot "virsnap_condescending_fermat" for VM "examplevm2".
+DEBU[0065] Restoring previous state of vm "examplevm2"
 DEBU[0066] Leaving creation of snapshot "virsnap_condescending_fermat" for VM "examplevm2".
 ```
 
@@ -103,7 +103,7 @@ examplevm2 (current state: DOMAIN_RUNNING, 4 snapshots total)
 
 
 joroec@host:~ $ virsnap clean -y -k 2 "^examplevm2$"
-INFO[0000] Removing snapshot "virsnap_hardcore_galileo" of VM "examplevm2". 
+INFO[0000] Removing snapshot "virsnap_hardcore_galileo" of VM "examplevm2".
 INFO[0000] Removing snapshot "virsnap_angry_hypatia" of VM "examplevm2".
 
 
@@ -120,7 +120,7 @@ examplevm2 (current state: DOMAIN_RUNNING, 2 snapshots total)
 
 ## Dependencies
 
-virsnap needs go 1.12+ and uses `go modules` for dependency management. For more 
+virsnap needs go 1.12+ and uses `go modules` for dependency management. For more
 information on `go modules`, see the corresponding [go modules documentation].
 
 [go modules documentation]: https://github.com/golang/go/wiki/Modules
@@ -237,70 +237,6 @@ export GOPATH=$HOME/.go-workspace
 [build guide]: https://golang.org/doc/install/source
 [release page]: https://golang.org/dl/
 [golang workspace]: https://golang.org/doc/code.html
-
-## Contributing
-
-First fork the repo to your account.
-
-Then setup your local environment:
-
-```shell
-# Subsitute with your github user
-user="your github username"
-
-# Clone it
-git clone git@github.com:$user/virsnap.git
-# or: git clone https://github.com/$user/virsnap.git
-
-# Set remote
-git remote add upstream git@github.com/joroec/virsnap.git
-# or: git remote add upstream https://github.com/joroeck/virsnap.git
-
-# Don't push to upstream
-git remote set-url --push upstream no_push
-
-# Check it all makes sense
-git remote -v
-```
-
-Update your local master:
-
-```shell
-cd virsnap
-git fetch upstream
-git checkout master
-git rebase upstream/master
-```
-
-Create a feature branch:
-
-```shell
-git checkout -b feature_branch
-```
-
-Keeping your local branch in sync:
-
-```shell
-# While on your feature_branch
-git fetch upstream
-git rebase upstream/master
-```
-
-After adding your changes, commit them:
-
-```shell
-git commit
-```
-
-Then push your changes to your local repository. If you rebased during
-development you might need to force-push:
-
-```shell
-git push -f
-```
-
-Lastly go to your vork on Github and create a pull request. Assign one of the 
-authors from the `AUTHORS` file to review it.
 
 ## License
 
