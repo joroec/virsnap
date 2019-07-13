@@ -158,7 +158,11 @@ To remove the tool from your system, execute the following in your shell:
 sudo rm /usr/local/bin/virsnap
 ```
 
-## Community, discussion, contribution, and support
+## Contributing
+
+See `CONTRIBUTING.md` file.
+
+## FAQ
 
 ### How do I install golang 1.12?
 
@@ -253,10 +257,10 @@ export GOPATH=$HOME/.go-workspace
 [release page]: https://golang.org/dl/
 [golang workspace]: https://golang.org/doc/code.html
 
-## License
-
-MIT License. See `LICENSE` file.
-
 ## Authors
 
 See `AUTHORS` file.
+
+## License
+
+MIT License. See `LICENSE` file.
