@@ -76,12 +76,12 @@ othervm1 (current state: DOMAIN_RUNNING, 1 snapshots total)
 
 ```
 joroec@host:~ $ virsnap create --shutdown --force --verbose "^examplevm2$"
-DEBU[0000] Trying to shutdown domain "examplevm2" gracefully. 
-DEBU[0000] Sending shutdown request to VM "examplevm2". 
-DEBU[0000] Waiting vor the VM "examplevm2" to shutdown. 
-DEBU[0065] Beginning creation of snapshot for VM "examplevm2". 
-INFO[0065] Created snapshot "virsnap_condescending_fermat" for VM "examplevm2". 
-DEBU[0065] Restoring previous state of vm "examplevm2"  
+DEBU[0000] Trying to shutdown domain "examplevm2" gracefully.
+DEBU[0000] Sending shutdown request to VM "examplevm2".
+DEBU[0000] Waiting vor the VM "examplevm2" to shutdown.
+DEBU[0065] Beginning creation of snapshot for VM "examplevm2".
+INFO[0065] Created snapshot "virsnap_condescending_fermat" for VM "examplevm2".
+DEBU[0065] Restoring previous state of vm "examplevm2"
 DEBU[0066] Leaving creation of snapshot "virsnap_condescending_fermat" for VM "examplevm2".
 ```
 
@@ -103,7 +103,7 @@ examplevm2 (current state: DOMAIN_RUNNING, 4 snapshots total)
 
 
 joroec@host:~ $ virsnap clean -y -k 2 "^examplevm2$"
-INFO[0000] Removing snapshot "virsnap_hardcore_galileo" of VM "examplevm2". 
+INFO[0000] Removing snapshot "virsnap_hardcore_galileo" of VM "examplevm2".
 INFO[0000] Removing snapshot "virsnap_angry_hypatia" of VM "examplevm2".
 
 
@@ -120,7 +120,7 @@ examplevm2 (current state: DOMAIN_RUNNING, 2 snapshots total)
 
 ## Dependencies
 
-virsnap needs go 1.12+ and uses `go modules` for dependency management. For more 
+virsnap needs go 1.12+ and uses `go modules` for dependency management. For more
 information on `go modules`, see the corresponding [go modules documentation].
 
 [go modules documentation]: https://github.com/golang/go/wiki/Modules
