@@ -59,5 +59,5 @@ development you might need to force-push:
 git push -f
 ```
 
-Lastly go to your vork on Github and create a pull request. Assign one of the
+Lastly go to your fork on Github and create a pull request. Assign one of the
 authors from the `AUTHORS` file to review it.
