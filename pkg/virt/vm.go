@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/libvirt/libvirt-go"
-	"github.com/libvirt/libvirt-go-xml"
+	libvirtxml "github.com/libvirt/libvirt-go-xml"
 )
 
 // -----------------------------------------------------------------------------
