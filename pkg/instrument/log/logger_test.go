@@ -7,18 +7,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var testConfigs = []struct {
-	cfg Configuration
-	ok  bool
-}{
-	{
-		cfg: Configuration{
-			Level:    "info",
-			Encoding: "console",
-		},
-		ok: true,
-	},
-}
+var (
+	validEncodings = []string{"json", "console"}
+	validLevels    = []string{"debug", "info", "warn", "error"}
+
+	invalidStrings = []string{"test", "asdo1293", "😍", "👾 🙇 💁 🙅 🙆 🙋 🙎 🙍", "﷽"}
+)
 
 func TestNewTestLogger(t *testing.T) {
 	log := NewTestLogger(t)
@@ -26,13 +20,43 @@ func TestNewTestLogger(t *testing.T) {
 }
 
 func TestConfigurations(t *testing.T) {
-	for _, tt := range testConfigs {
-		log, err := tt.cfg.NewLogger()
-		if tt.ok {
-			require.NoError(t, err, fmt.Sprintf("Configuration %#v should not throw error", tt.cfg))
-			require.NotNil(t, log)
-		} else {
-			require.Error(t, err, fmt.Sprintf("Configuration %#v should throw error", tt.cfg))
+	t.Run("TestValid", func(t *testing.T) {
+		for _, encoding := range validEncodings {
+			for _, level := range validLevels {
+				cfg := Configuration{
+					Level:    level,
+					Encoding: encoding,
+				}
+				log, err := cfg.NewLogger()
+				require.NoError(t, err, fmt.Sprintf("Configuration %#v should not throw error", cfg))
+				require.NotNil(t, log)
+			}
 		}
-	}
+	})
+
+	t.Run("TestInvalid", func(t *testing.T) {
+		for _, encoding := range validEncodings {
+			for _, level := range invalidStrings {
+				cfg := Configuration{
+					Level:    level,
+					Encoding: encoding,
+				}
+				log, err := cfg.NewLogger()
+				require.Error(t, err, fmt.Sprintf("Configuration %#v should throw error", cfg))
+				require.Nil(t, log)
+			}
+		}
+
+		for _, encoding := range invalidStrings {
+			for _, level := range validLevels {
+				cfg := Configuration{
+					Level:    level,
+					Encoding: encoding,
+				}
+				log, err := cfg.NewLogger()
+				require.Error(t, err, fmt.Sprintf("Configuration %#v should throw error", cfg))
+				require.Nil(t, log)
+			}
+		}
+	})
 }
