@@ -7,9 +7,9 @@
 package virt
 
 import (
-  "os"
-  
-  "github.com/sirupsen/logrus"
+	"os"
+
+	"github.com/sirupsen/logrus"
 )
 
 // Logger is the logrus object that is used of this package to print warning
@@ -24,6 +24,6 @@ var Logger = logrus.New()
 // init is a special golang function that is called exactly once regardless
 // how often the package is imported.
 func init() {
-  Logger.Out = os.Stdout
-  Logger.SetLevel(logrus.WarnLevel)
+	Logger.Out = os.Stdout
+	Logger.SetLevel(logrus.WarnLevel)
 }

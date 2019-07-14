@@ -6,10 +6,10 @@
 package cmd
 
 import (
-  "github.com/spf13/cobra"
-  "github.com/joroec/virsnap/pkg/virt"
-  
-  log "github.com/sirupsen/logrus"
+	"github.com/joroec/virsnap/pkg/virt"
+	"github.com/spf13/cobra"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // Verbose is a persistent flag that can be issued for any command issued over
@@ -20,26 +20,26 @@ var Verbose bool
 // PersistentPreRun functions are inherited to child commands, so any command
 // initializes the Logger accordingly if the verbose flag is set.
 var RootCmd = &cobra.Command{
-  Use:   "virsnap",
-  Short: "virsnap is a small tool that eases the automated creation and "+
-    "deletion of VM snapshots.",
-  Long:  "virsnap is a small tool that eases the automated creation and "+
-    "deletion of VM snapshots.",
-  PersistentPreRun: initializeLogger,
+	Use: "virsnap",
+	Short: "virsnap is a small tool that eases the automated creation and " +
+		"deletion of VM snapshots.",
+	Long: "virsnap is a small tool that eases the automated creation and " +
+		"deletion of VM snapshots.",
+	PersistentPreRun: initializeLogger,
 }
 
 // initializeLogger is a little helper function that enables tracing and
 // debug outputs if the verbose flag is set.
 func initializeLogger(cmd *cobra.Command, args []string) {
-  if Verbose {
-    log.SetLevel(log.TraceLevel)
-    virt.Logger.SetLevel(log.TraceLevel)
-  }
+	if Verbose {
+		log.SetLevel(log.TraceLevel)
+		virt.Logger.SetLevel(log.TraceLevel)
+	}
 }
 
 // init is a special golang function that is called exactly once regardless
 // how often the package is imported.
 func init() {
-  RootCmd.PersistentFlags().BoolVarP(&Verbose, "verbose", "v", false, 
-    "verbose output")
+	RootCmd.PersistentFlags().BoolVarP(&Verbose, "verbose", "v", false,
+		"verbose output")
 }
