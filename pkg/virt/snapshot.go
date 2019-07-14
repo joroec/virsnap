@@ -14,6 +14,7 @@ import (
 	"github.com/docker/docker/pkg/namesgenerator"
 	"github.com/libvirt/libvirt-go"
 	libvirtxml "github.com/libvirt/libvirt-go-xml"
+	"go.uber.org/zap"
 )
 
 // -----------------------------------------------------------------------------
@@ -46,7 +47,7 @@ func (vm *VM) ListMatchingSnapshots(regexes []string) ([]Snapshot, error) {
 	for _, arg := range regexes {
 		regex, err := regexp.Compile(arg)
 		if err != nil {
-			err = fmt.Errorf("Could not compile the regular expression %s: %v", arg,
+			err = fmt.Errorf("unable to compile regular expression %s: %v", arg,
 				err)
 			return nil, err
 		}
@@ -54,38 +55,36 @@ func (vm *VM) ListMatchingSnapshots(regexes []string) ([]Snapshot, error) {
 	}
 
 	if len(exprs) == 0 {
-		return nil, fmt.Errorf("No regular expression was specified")
+		return nil, fmt.Errorf("no regular expression was specified")
 	}
 
 	// retrieve all snapshots from libvirt
 	instances, err := vm.Instance.ListAllSnapshots(0)
 	if err != nil {
-		err = fmt.Errorf("Could not retrieve the snapshots for the VM %s: %v",
+		err = fmt.Errorf("unable to retrieve snapshots for VM %s: %v",
 			vm.Descriptor.Name, err)
 		return nil, err
 	}
 
 	matchedSnapshots := make([]Snapshot, 0, len(instances))
 
-	// loop over the snapshots and check for a match with the given
+	// loop over snapshots and check for a match with the given
 	// regular expressions
 	for _, instance := range instances {
 
-		// retrieve and unmarshal the descriptor of the snapshot
+		// retrieve and unmarshal the descriptor of snapshot
 		xml, err := instance.GetXMLDesc(0)
 		if err != nil {
-			err = fmt.Errorf("Could not get the XML descriptor of a snapshot. "+
-				"Skipping this snapshot: %v", err)
-			Logger.Warning(err)
+			err = fmt.Errorf("unable to get XML descriptor of snapshot: %s", err)
+			vm.Logger.Warnf("Skipping snapshot: %s", err)
 			continue
 		}
 
 		descriptor := libvirtxml.DomainSnapshot{}
 		err = descriptor.Unmarshal(xml)
 		if err != nil {
-			err = fmt.Errorf("Could not unmarshal the XML descriptor of a snapshot. "+
-				"Skipping this snapshot: %v", err)
-			Logger.Warning(err)
+			err = fmt.Errorf("unable to unmarshal the XML descriptor of snapshot: %s", err)
+			vm.Logger.Warn("Skipping snapshot: %v", err)
 			continue
 		}
 
@@ -110,14 +109,15 @@ func (vm *VM) ListMatchingSnapshots(regexes []string) ([]Snapshot, error) {
 			// we do not need the instance here anymore
 			err = instance.Free()
 			if err != nil {
-				err = fmt.Errorf("Could not free the snapshot %s: %v", descriptor.Name,
-					err)
-				Logger.Warn(err)
+				vm.Logger.Warnf("unable to free snapshot %s: %v",
+					descriptor.Name,
+					err,
+				)
 			}
 		}
 	}
 
-	// sort the snapshots according to their creation date increasingly
+	// sort snapshots according to their creation date increasingly
 	sorter := SnapshotSorter{
 		Snapshots: &matchedSnapshots,
 	}
@@ -129,20 +129,21 @@ func (vm *VM) ListMatchingSnapshots(regexes []string) ([]Snapshot, error) {
 // FreeSnapshots is a function that takes a slice of snapshots and frees any
 // associated libvirt.DomainSnapshot. Usually, this is called after
 // ListMatchingSnapshots with a "defer" statement.
-func FreeSnapshots(snapshots []Snapshot) {
+func FreeSnapshots(log *zap.SugaredLogger, snapshots []Snapshot) {
 	for _, snapshot := range snapshots {
 		err := snapshot.Instance.Free()
 		if err != nil {
-			err = fmt.Errorf("Could not free the snapshot %s: %v",
-				snapshot.Descriptor.Name, err)
-			Logger.Warn(err)
+			log.Warnf("unable to free snapshot %s: %s",
+				snapshot.Descriptor.Name,
+				err,
+			)
 		}
 	}
 }
 
 // CreateSnapshot creates a snapshot for the given domain while checking
 // whether the name is already used. The given prefix is prepended to the
-// snapshots name. The caller is responsible for calling Free on the snapshot.
+// snapshots name. The caller is responsible for calling Free on snapshot.
 func (vm *VM) CreateSnapshot(prefix string, description string) (Snapshot,
 	error) {
 	var descriptor libvirtxml.DomainSnapshot
@@ -157,8 +158,10 @@ func (vm *VM) CreateSnapshot(prefix string, description string) (Snapshot,
 		regex := []string{"^" + descriptor.Name + "$"}
 		snapshots, err := vm.ListMatchingSnapshots(regex)
 		if err != nil {
-			err = fmt.Errorf("Could not retrieve the existing snapshot for VM "+
-				"\"%s\": %v", vm.Descriptor.Name, err)
+			err = fmt.Errorf("unable to retrieve existing snapshot for VM '%s': %v",
+				vm.Descriptor.Name,
+				err,
+			)
 			return Snapshot{}, err
 		}
 
@@ -167,18 +170,22 @@ func (vm *VM) CreateSnapshot(prefix string, description string) (Snapshot,
 		}
 	}
 
-	// create the snapshot with the given name
+	// create snapshot with the given name
 	xml, err := descriptor.Marshal()
 	if err != nil {
-		err = fmt.Errorf("Could not marshal the snapshot xml for VM \"%s\": %s",
-			vm.Descriptor.Name, err)
+		err = fmt.Errorf("unable to marshal snapshot XML for VM '%s': %s",
+			vm.Descriptor.Name,
+			err,
+		)
 		return Snapshot{}, err
 	}
 
 	snapshot, err := vm.Instance.CreateSnapshotXML(xml, 0)
 	if err != nil {
-		err = fmt.Errorf("Could not create the snapshot for the VM \"%s\"",
-			vm.Descriptor.Name)
+		err = fmt.Errorf("unable to create snapshot for VM '%s': %s",
+			vm.Descriptor.Name,
+			err,
+		)
 		return Snapshot{}, err
 	}
 
