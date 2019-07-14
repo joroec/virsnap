@@ -21,7 +21,7 @@ type Configuration struct {
 }
 
 // NewTestLogger returns a new logger for testing purposes. This logger is
-// configured with  the zap DevelopmentConfig and annotations disabled.
+// configured with the zap DevelopmentConfig and annotations are disabled.
 func NewTestLogger(t *testing.T) *zap.Logger {
 	zc := zap.NewDevelopmentConfig()
 	zc.DisableCaller = true
