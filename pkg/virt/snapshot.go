@@ -13,7 +13,7 @@ import (
 
 	"github.com/docker/docker/pkg/namesgenerator"
 	"github.com/libvirt/libvirt-go"
-	"github.com/libvirt/libvirt-go-xml"
+	libvirtxml "github.com/libvirt/libvirt-go-xml"
 )
 
 // -----------------------------------------------------------------------------
@@ -170,7 +170,7 @@ func (vm *VM) CreateSnapshot(prefix string, description string) (Snapshot,
 	// create the snapshot with the given name
 	xml, err := descriptor.Marshal()
 	if err != nil {
-		err = fmt.Errorf("Could not marshal the snapshot xml for VM \"%s\"",
+		err = fmt.Errorf("Could not marshal the snapshot xml for VM \"%s\": %s",
 			vm.Descriptor.Name, err)
 		return Snapshot{}, err
 	}
