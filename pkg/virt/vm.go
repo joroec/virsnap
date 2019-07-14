@@ -126,8 +126,10 @@ func (vm *VM) Transition(to libvirt.DomainState, forceShutdown bool,
 
 					}
 
-					err = fmt.Errorf("unable to initiate the shutdown request for "+
-						"VM '%s': %v", vm.Descriptor.Name, err)
+					err = fmt.Errorf("unable to initiate the shutdown request for VM '%s': %s",
+						vm.Descriptor.Name,
+						err,
+					)
 					return libvirt.DOMAIN_RUNNING, err
 
 				}
@@ -212,7 +214,7 @@ func (vm *VM) Transition(to libvirt.DomainState, forceShutdown bool,
 
 			err := vm.Instance.Create()
 			if err != nil {
-				vm.Logger.Errorf("unable to boot VM '%s': %v",
+				vm.Logger.Errorf("unable to boot VM '%s': %s",
 					vm.Descriptor.Name,
 					err,
 				)
@@ -344,7 +346,7 @@ func (vm *VM) Transition(to libvirt.DomainState, forceShutdown bool,
 			vm.Logger.Debugf("Resuming domain '%s'.", vm.Descriptor.Name)
 			err = vm.Instance.Resume()
 			if err != nil {
-				err = fmt.Errorf("Could not resume VM '%s': %s",
+				err = fmt.Errorf("unable to resume VM '%s': %s",
 					vm.Descriptor.Name,
 					err,
 				)
@@ -397,8 +399,10 @@ func (vm *VM) Transition(to libvirt.DomainState, forceShutdown bool,
 			vm.Logger.Debugf("Wake up domain '%s'.", vm.Descriptor.Name)
 			err = vm.Instance.PMWakeup(0)
 			if err != nil {
-				err = fmt.Errorf("Could not wake up the VM '%s'; Error was: %v",
-					vm.Descriptor.Name, err)
+				err = fmt.Errorf("unable to wake up VM '%s': %s",
+					vm.Descriptor.Name,
+					err,
+				)
 				return state, err
 			}
 			return state, nil
@@ -515,7 +519,7 @@ func ListMatchingVMs(log *zap.SugaredLogger, regexes []string) ([]VM, error) {
 	for _, arg := range regexes {
 		regex, err := regexp.Compile(arg)
 		if err != nil {
-			err = fmt.Errorf("unable to compile regular expression %s: %v", arg,
+			err = fmt.Errorf("unable to compile regular expression %s: %s", arg,
 				err)
 			return nil, err
 		}
@@ -529,7 +533,7 @@ func ListMatchingVMs(log *zap.SugaredLogger, regexes []string) ([]VM, error) {
 	// trying to connect to QEMU socket...
 	conn, err := libvirt.NewConnect("qemu:///system")
 	if err != nil {
-		err = fmt.Errorf("unable to connect to QEMU socket: %v", err)
+		err = fmt.Errorf("unable to connect to QEMU socket: %s", err)
 		return nil, err
 	}
 	defer conn.Close()
@@ -540,7 +544,7 @@ func ListMatchingVMs(log *zap.SugaredLogger, regexes []string) ([]VM, error) {
 	// we use 0 which returns all of the found virtual machines.
 	instances, err := conn.ListAllDomains(0)
 	if err != nil {
-		err = fmt.Errorf("unable to retrieve list of VMs from QEMU: %v",
+		err = fmt.Errorf("unable to retrieve list of VMs from QEMU: %s",
 			err)
 		return nil, err
 	}
