@@ -30,7 +30,7 @@ func NewTestLogger(t *testing.T) *zap.Logger {
 	return zl
 }
 
-// NewLogger returns a new logger with production-ready config.
+// NewLogger returns a new logger with a production-ready config.
 func (cfg Configuration) NewLogger() (*zap.Logger, error) {
 	zc := zap.Config{
 		Level:             zap.NewAtomicLevelAt(zap.InfoLevel),
@@ -70,4 +70,19 @@ func (cfg Configuration) NewLogger() (*zap.Logger, error) {
 	}
 
 	return zc.Build()
+}
+
+// NewDefaultLogger returns an opinionated, sugared logger.
+func NewDefaultLogger() (*zap.SugaredLogger, error) {
+	cfg := Configuration{
+		Level:    "info",
+		Encoding: "console",
+	}
+
+	log, err := cfg.NewLogger()
+	if err != nil {
+		return nil, err
+	}
+
+	return log.Sugar(), nil
 }

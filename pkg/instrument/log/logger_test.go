@@ -60,3 +60,9 @@ func TestConfigurations(t *testing.T) {
 		}
 	})
 }
+
+func TestDefaultLogger(t *testing.T) {
+	log, err := NewDefaultLogger()
+	require.NoError(t, err)
+	require.NotNil(t, log)
+}
