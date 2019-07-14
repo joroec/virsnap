@@ -143,6 +143,45 @@ To remove the tool from your system, execute the following in your shell:
 sudo rm /usr/local/bin/virsnap
 ```
 
+## Periodical snapshots
+
+To use virsnap for regular snapshotting your virtual machines, determine your
+init system and instruct it to periodically call virsnap. There are examplary
+init configurations in the `init` directory of this repository.
+
+
+### systemd
+Adjust the files `init/systemd/virsnap.service` and `init/systemd/virsnap.timer`
+to your needs. After this, copy both files to `/etc/systemd/system`.
+
+You can check that your service if found:
+```shell
+$ systemctl status virsnap
+● virsnap.service - A CLI snapshot systemd service for libvirt
+   Loaded: loaded (/etc/systemd/system/virsnap.service; static; vendor preset: enabled)
+   Active: inactive (dead)
+```
+
+Test a single execution of virsnap if desired:
+```shell
+systemctl start virsnap
+```
+
+You can watch the logs with:
+```shell
+journalctl -u virsnap
+```
+
+Start periodic execution:
+```shell
+systemctl start virsnap.timer
+```
+
+Check if the timer is activated:
+```shell
+systemctl status virsnap.timer
+```
+
 ## Community, discussion, contribution, and support
 
 ### How do I install golang 1.12?
