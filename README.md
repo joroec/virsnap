@@ -76,12 +76,12 @@ othervm1 (current state: DOMAIN_RUNNING, 1 snapshots total)
 
 ```
 joroec@host:~ $ virsnap create --shutdown --force --verbose "^examplevm2$"
-DEBU[0000] Trying to shutdown domain "examplevm2" gracefully. 
-DEBU[0000] Sending shutdown request to VM "examplevm2". 
-DEBU[0000] Waiting vor the VM "examplevm2" to shutdown. 
-DEBU[0065] Beginning creation of snapshot for VM "examplevm2". 
-INFO[0065] Created snapshot "virsnap_condescending_fermat" for VM "examplevm2". 
-DEBU[0065] Restoring previous state of vm "examplevm2"  
+DEBU[0000] Trying to shutdown domain "examplevm2" gracefully.
+DEBU[0000] Sending shutdown request to VM "examplevm2".
+DEBU[0000] Waiting vor the VM "examplevm2" to shutdown.
+DEBU[0065] Beginning creation of snapshot for VM "examplevm2".
+INFO[0065] Created snapshot "virsnap_condescending_fermat" for VM "examplevm2".
+DEBU[0065] Restoring previous state of vm "examplevm2"
 DEBU[0066] Leaving creation of snapshot "virsnap_condescending_fermat" for VM "examplevm2".
 ```
 
@@ -103,7 +103,7 @@ examplevm2 (current state: DOMAIN_RUNNING, 4 snapshots total)
 
 
 joroec@host:~ $ virsnap clean -y -k 2 "^examplevm2$"
-INFO[0000] Removing snapshot "virsnap_hardcore_galileo" of VM "examplevm2". 
+INFO[0000] Removing snapshot "virsnap_hardcore_galileo" of VM "examplevm2".
 INFO[0000] Removing snapshot "virsnap_angry_hypatia" of VM "examplevm2".
 
 
@@ -120,14 +120,28 @@ examplevm2 (current state: DOMAIN_RUNNING, 2 snapshots total)
 
 ## Dependencies
 
-virsnap needs go 1.12+ and uses `go modules` for dependency management. For more 
+virsnap needs go 1.12+ and uses `go modules` for dependency management. For more
 information on `go modules`, see the corresponding [go modules documentation].
 
 [go modules documentation]: https://github.com/golang/go/wiki/Modules
 
 ## Installation
 
+First make sure libvirt is installed. You can use your local packet manager or [compile](https://libvirt.org/compiling.html) it by yourself.
+
+On Ubuntu, you can use apt:
+```shell
+sudo apt-get install libvirt-bin libvirt-dev
+```
+
+On macOS, you can use Homebrew:
+
+```shell
+brew install libvirt
+```
+
 To install virsnap, execute the following in your shell:
+
 ```shell
 git clone http://github.com/joroec/virsnap
 cd virsnap
@@ -139,6 +153,7 @@ This will compile and link the virsnap binary and install it into
 `/usr/local/bin/virsnap`. No other file is installed in system directories.
 
 To remove the tool from your system, execute the following in your shell:
+
 ```shell
 sudo rm /usr/local/bin/virsnap
 ```
@@ -182,7 +197,11 @@ Check if the timer is activated:
 systemctl status virsnap.timer
 ```
 
-## Community, discussion, contribution, and support
+## Contributing
+
+See `CONTRIBUTING.md` file.
+
+## FAQ
 
 ### How do I install golang 1.12?
 
@@ -277,10 +296,10 @@ export GOPATH=$HOME/.go-workspace
 [release page]: https://golang.org/dl/
 [golang workspace]: https://golang.org/doc/code.html
 
-## License
-
-MIT License. See `LICENSE` file.
-
 ## Authors
 
 See `AUTHORS` file.
+
+## License
+
+MIT License. See `LICENSE` file.
