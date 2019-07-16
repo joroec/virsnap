@@ -35,7 +35,7 @@ examplevm1 (current state: DOMAIN_PAUSED, 1 snapshots total)
 +------------------------+-------------------------------+---------+
 |        SNAPSHOT        |             TIME              |  STATE  |
 +------------------------+-------------------------------+---------+
-| virsnap_heuristic_bose | Thu Jul 11 08:37:50 CEST 2019 | shutoff |
+| virsnap_heuristic_bose | Thu Jul 11 08:37:50 CEST 2019 | shutoff  |
 +------------------------+-------------------------------+---------+
 
 examplevm2 (current state: DOMAIN_RUNNING, 2 snapshots total)
@@ -43,7 +43,7 @@ examplevm2 (current state: DOMAIN_RUNNING, 2 snapshots total)
 |         SNAPSHOT         |             TIME              |  STATE  |
 +--------------------------+-------------------------------+---------+
 | virsnap_hardcore_galileo | Thu Jul 11 08:39:51 CEST 2019 | running |
-| virsnap_angry_hypatia    | Thu Jul 11 08:40:15 CEST 2019 | shutoff |
+| virsnap_angry_hypatia    | Thu Jul 11 08:40:15 CEST 2019 | shutoff  |
 +--------------------------+-------------------------------+---------+
 ```
 
@@ -53,7 +53,7 @@ examplevm1 (current state: DOMAIN_SHUTOFF, 1 snapshots total)
 +------------------------+-------------------------------+---------+
 |        SNAPSHOT        |             TIME              |  STATE  |
 +------------------------+-------------------------------+---------+
-| virsnap_heuristic_bose | Thu Jul 11 08:37:50 CEST 2019 | shutoff |
+| virsnap_heuristic_bose | Thu Jul 11 08:37:50 CEST 2019 | shutoff  |
 +------------------------+-------------------------------+---------+
 
 examplevm2 (current state: DOMAIN_RUNNING, 2 snapshots total)
@@ -61,14 +61,14 @@ examplevm2 (current state: DOMAIN_RUNNING, 2 snapshots total)
 |         SNAPSHOT         |             TIME              |  STATE  |
 +--------------------------+-------------------------------+---------+
 | virsnap_hardcore_galileo | Thu Jul 11 08:39:51 CEST 2019 | running |
-| virsnap_angry_hypatia    | Thu Jul 11 08:40:15 CEST 2019 | shutoff |
+| virsnap_angry_hypatia    | Thu Jul 11 08:40:15 CEST 2019 | shutoff  |
 +--------------------------+-------------------------------+---------+
 
 othervm1 (current state: DOMAIN_RUNNING, 1 snapshots total)
 +-------------------------+-------------------------------+---------+
 |        SNAPSHOT         |             TIME              |  STATE  |
 +-------------------------+-------------------------------+---------+
-| virsnap_gracious_turing | Thu Jul 11 09:05:36 CEST 2019 | shutoff |
+| virsnap_gracious_turing | Thu Jul 11 09:05:36 CEST 2019 | shutoff  |
 +-------------------------+-------------------------------+---------+
 ```
 
@@ -96,9 +96,9 @@ examplevm2 (current state: DOMAIN_RUNNING, 4 snapshots total)
 |           SNAPSHOT           |             TIME              |  STATE  |
 +------------------------------+-------------------------------+---------+
 | virsnap_hardcore_galileo     | Thu Jul 11 08:39:51 CEST 2019 | running |
-| virsnap_angry_hypatia        | Thu Jul 11 08:40:15 CEST 2019 | shutoff |
-| virsnap_cranky_sammet        | Thu Jul 11 09:07:55 CEST 2019 | shutoff |
-| virsnap_condescending_fermat | Thu Jul 11 09:09:09 CEST 2019 | shutoff |
+| virsnap_angry_hypatia        | Thu Jul 11 08:40:15 CEST 2019 | shutoff  |
+| virsnap_cranky_sammet        | Thu Jul 11 09:07:55 CEST 2019 | shutoff  |
+| virsnap_condescending_fermat | Thu Jul 11 09:09:09 CEST 2019 | shutoff  |
 +------------------------------+-------------------------------+---------+
 
 
@@ -112,8 +112,8 @@ examplevm2 (current state: DOMAIN_RUNNING, 2 snapshots total)
 +------------------------------+-------------------------------+---------+
 |           SNAPSHOT           |             TIME              |  STATE  |
 +------------------------------+-------------------------------+---------+
-| virsnap_cranky_sammet        | Thu Jul 11 09:07:55 CEST 2019 | shutoff |
-| virsnap_condescending_fermat | Thu Jul 11 09:09:09 CEST 2019 | shutoff |
+| virsnap_cranky_sammet        | Thu Jul 11 09:07:55 CEST 2019 | shutoff  |
+| virsnap_condescending_fermat | Thu Jul 11 09:09:09 CEST 2019 | shutoff  |
 +------------------------------+-------------------------------+---------+
 
 ```
