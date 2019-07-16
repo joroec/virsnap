@@ -161,7 +161,7 @@ sudo rm /usr/local/bin/virsnap
 ## Periodical snapshots
 
 To use virsnap for regular snapshotting your virtual machines, determine your
-init system and instruct it to periodically call virsnap. There are examplary
+init system and instruct it to periodically call virsnap. There are exemplary
 init configurations in the `init` directory of this repository.
 
 
@@ -169,7 +169,7 @@ init configurations in the `init` directory of this repository.
 Adjust the files `init/systemd/virsnap.service` and `init/systemd/virsnap.timer`
 to your needs. After this, copy both files to `/etc/systemd/system`.
 
-You can check that your service if found:
+You can check that your service is found:
 ```shell
 $ systemctl status virsnap
 ● virsnap.service - A CLI snapshot systemd service for libvirt
