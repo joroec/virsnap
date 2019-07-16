@@ -19,4 +19,5 @@ Description=Description=A CLI snapshot systemd timer for libvirt
 # timers is reset (both OnCalendar= timers and monotonic timers, see above), and
 # all prior assignments will have no effect.
 # Execute virsnap every day at 4am.
+# You can adjust the following line according to your personal preference.
 OnCalendar=*-*-* 04:00:00

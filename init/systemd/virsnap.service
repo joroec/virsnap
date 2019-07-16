@@ -4,15 +4,12 @@
 # This directory contains files for automatically starting virnsnap via systemd.
 
 [Unit]
-Description=A CLI snapshot systemd service for libvirt
+Description=A CLI snapshot systemd unit file for libvirt
 
-# Behavior of oneshot is similar to simple; however, the service manager will
-# consider the unit started after the main process exits. It will then start
-# follow-up units. RemainAfterExit= is particularly useful for this type of
-# service. Type=oneshot is the implied default if neither Type= nor ExecStart=
-# are specified.
 [Service]
 Type=oneshot
+
+# You can adjust the following lines according to your personal preference.
 
 # Create a new snapshot of any VM when the VM is shutoff.
 ExecStart=/usr/local/bin/virsnap create --shutdown --force --verbose "^.*$"
