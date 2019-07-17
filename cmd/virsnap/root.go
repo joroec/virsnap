@@ -3,43 +3,60 @@
 // the "LICENSE" file in this repository.
 
 // Package cmd implements the handlers for the different command line arguments.
-package cmd
+package main
 
 import (
-	"github.com/joroec/virsnap/pkg/virt"
-	"github.com/spf13/cobra"
+	"fmt"
+	"os"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/joroec/virsnap/pkg/instrument/log"
+	"github.com/spf13/cobra"
+	"go.uber.org/zap"
 )
 
-// Verbose is a persistent flag that can be issued for any command issued over
-// the command line.
-var Verbose bool
+var (
+	// RootCmd is a global variable defining the corresponding cobra command.
+	RootCmd = &cobra.Command{
+		Use: "virsnap",
+		Short: "virsnap is a small tool that eases the automated creation and " +
+			"deletion of VM snapshots.",
+		Long: "virsnap is a small tool that eases the automated creation and " +
+			"deletion of VM snapshots.",
+		PersistentPreRun: initLogger,
+	}
 
-// RootCmd is a global variable defining the corresponding cobra command.
-// PersistentPreRun functions are inherited to child commands, so any command
-// initializes the Logger accordingly if the verbose flag is set.
-var RootCmd = &cobra.Command{
-	Use: "virsnap",
-	Short: "virsnap is a small tool that eases the automated creation and " +
-		"deletion of VM snapshots.",
-	Long: "virsnap is a small tool that eases the automated creation and " +
-		"deletion of VM snapshots.",
-	PersistentPreRun: initializeLogger,
+	logger      *zap.SugaredLogger
+	logLevel    = "info"
+	logEncoding = "console"
+)
+
+func initLogger(cmd *cobra.Command, args []string) {
+	cfg := log.Configuration{
+		Level:    logLevel,
+		Encoding: logEncoding,
+	}
+	l, err := cfg.NewLogger()
+	if err != nil {
+		fmt.Printf("unable to initialize logger: %s\n", err)
+		os.Exit(1)
+	}
+
+	logger = l.Sugar()
+	logger.Debugf("Logger initialized")
 }
 
-// initializeLogger is a little helper function that enables tracing and
-// debug outputs if the verbose flag is set.
-func initializeLogger(cmd *cobra.Command, args []string) {
-	if Verbose {
-		log.SetLevel(log.TraceLevel)
-		virt.Logger.SetLevel(log.TraceLevel)
+// Execute runs the RootCmd.
+func Execute() {
+	if err := RootCmd.Execute(); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
 	}
 }
 
 // init is a special golang function that is called exactly once regardless
 // how often the package is imported.
 func init() {
-	RootCmd.PersistentFlags().BoolVarP(&Verbose, "verbose", "v", false,
-		"verbose output")
+	f := RootCmd.PersistentFlags()
+	f.StringVarP(&logLevel, "log-level", "l", logLevel, "sets the log level (debug, info, warn, error)")
+	f.StringVarP(&logEncoding, "log-encoding", "e", logEncoding, "sets the log encoding (console, json)")
 }

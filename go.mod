@@ -9,6 +9,7 @@ require (
 	github.com/libvirt/libvirt-go-xml v5.3.0+incompatible
 	github.com/mattn/go-runewidth v0.0.4 // indirect
 	github.com/olekukonko/tablewriter v0.0.1
+	github.com/pkg/errors v0.8.1 // indirect
 	github.com/sirupsen/logrus v1.4.2
 	github.com/spf13/cobra v0.0.5
 	github.com/stretchr/objx v0.2.0 // indirect

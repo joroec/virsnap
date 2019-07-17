@@ -52,7 +52,10 @@ func (cfg Configuration) NewLogger() (*zap.Logger, error) {
 	if len(cfg.Level) != 0 {
 		var parsedLevel zap.AtomicLevel
 		if err := parsedLevel.UnmarshalText([]byte(cfg.Level)); err != nil {
-			return nil, fmt.Errorf("unable to parse log level %s: %v", cfg.Level, err)
+			return nil, fmt.Errorf("unable to parse log level %s: %s",
+				cfg.Level,
+				err,
+			)
 		}
 		zc.Level = parsedLevel
 	}

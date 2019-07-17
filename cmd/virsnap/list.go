@@ -2,8 +2,7 @@
 // Licensed under the MIT License. You have obtained a copy of the License at
 // the "LICENSE" file in this repository.
 
-// Package cmd implements the handlers for the different command line arguments.
-package cmd
+package main
 
 import (
 	"fmt"
@@ -12,11 +11,9 @@ import (
 	"time"
 
 	"github.com/bclicn/color"
-	"github.com/olekukonko/tablewriter"
-	log "github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
-
 	"github.com/joroec/virsnap/pkg/virt"
+	"github.com/olekukonko/tablewriter"
+	"github.com/spf13/cobra"
 )
 
 // listCmd is a global variable defining the corresponding cobra command
@@ -49,28 +46,28 @@ func listRun(cmd *cobra.Command, args []string) {
 	var vms []virt.VM
 
 	if len(args) > 0 {
-		log.Debug("Using regular expression specified as command line argument.")
-		vms, err = virt.ListMatchingVMs(args)
+		logger.Debug("Using regular expression specified as command line argument: %#v", args)
+		vms, err = virt.ListMatchingVMs(logger, args)
 	} else {
 		// listvms should display any virtual machine found. So, we need to specify
 		// a search regex that matches any virtual machine name.
-		log.Debug("Using default regular expression '.*', since no regular " +
-			"expression was specified as command line argument.")
+		logger.Debug("Using default regular expression '.*', since no regular " +
+			"expression was specified as command line argument")
 		regex := []string{".*"}
-		vms, err = virt.ListMatchingVMs(regex)
+		vms, err = virt.ListMatchingVMs(logger, regex)
 	}
 
 	if err != nil {
-		err = fmt.Errorf("Could not retrieve the virtual machines from libvirt: %v",
-			err)
-		log.Fatal(err)
+		err = fmt.Errorf("unable to retrieve virtual machines from libvirt: %s",
+			err,
+		)
+		logger.Fatalf("%s", err)
 	}
 
-	defer virt.FreeVMs(vms)
+	defer virt.FreeVMs(logger, vms)
 
 	if len(vms) == 0 {
-		log.Info("There were no virtual machines matchig the given regular " +
-			"expression(s).")
+		logger.Info(errNoVMsMatchingRegex)
 		return
 	}
 
@@ -78,18 +75,22 @@ func listRun(cmd *cobra.Command, args []string) {
 	for index, vm := range vms {
 		vmstate, err := vm.GetCurrentStateString()
 		if err != nil {
-			log.Errorf("Could not retrieve the current state of the VM %s: %v ",
-				vm.Descriptor.Name, err)
+			logger.Errorf("unable to retrieve current state of VM %s: %s",
+				vm.Descriptor.Name,
+				err,
+			)
 		}
 
 		snapshots, err := vm.ListMatchingSnapshots([]string{".*"})
 		if err != nil {
-			log.Errorf("Could not retrieve the snapshots for the domain %s. "+
-				"Skipping the domain.", vm.Descriptor.Name)
+			logger.Errorf("skipping domain '%s': unable to retrieve snapshots for said domain: %s",
+				vm.Descriptor.Name,
+				err,
+			)
 			continue
 		}
 
-		defer virt.FreeSnapshots(snapshots)
+		defer virt.FreeSnapshots(logger, snapshots)
 
 		// print the VM header to stdout
 		fmt.Printf("%s (current state: %s, %d snapshots total)\n",
@@ -110,8 +111,10 @@ func listRun(cmd *cobra.Command, args []string) {
 			// convert timestamp to human-readable format
 			timeInt, err := strconv.ParseInt(snapshot.Descriptor.CreationTime, 10, 64)
 			if err != nil {
-				log.Errorf("Could not convert the snapshot creation time of VM %s. "+
-					"Skipping VM: %v", vm.Descriptor.Name, err)
+				logger.Errorf("skipping VM '%s': unable to convert snapshot creation time of VM: %s",
+					vm.Descriptor.Name,
+					err,
+				)
 				continue
 			}
 			time := time.Unix(timeInt, 0)

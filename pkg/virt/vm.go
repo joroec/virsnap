@@ -585,6 +585,7 @@ func ListMatchingVMs(log *zap.SugaredLogger, regexes []string) ([]VM, error) {
 			matchedVM := VM{
 				Instance:   instance,
 				Descriptor: descriptor,
+				Logger:     log,
 			}
 			matchedVMs = append(matchedVMs, matchedVM)
 		} else {
