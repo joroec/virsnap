@@ -41,12 +41,12 @@ var (
 			"snapshot behavior uses internal snapshots. Example: \n" +
 			`
 <disk type='file' device='disk' snapshot='internal'>
-<driver name='qemu' type='qcow2'/>
-<source file='/.../testing.qcow2'/>
-<backingStore/>
-<target dev='hda' bus='ide'/>
-<alias name='ide0-0-0'/>
-<address type='drive' controller='0' bus='0' target='0' unit='0'/>
+  <driver name='qemu' type='qcow2'/>
+  <source file='/.../testing.qcow2'/>
+  <backingStore/>
+  <target dev='hda' bus='ide'/>
+  <alias name='ide0-0-0'/>
+  <address type='drive' controller='0' bus='0' target='0' unit='0'/>
 </disk>`,
 		Args: cobra.MinimumNArgs(1),
 		Run:  createRun,
