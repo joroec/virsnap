@@ -145,8 +145,8 @@ To install virsnap, execute the following in your shell:
 ```shell
 git clone http://github.com/joroec/virsnap
 cd virsnap
-go build
-sudo install virsnap /usr/local/bin/virsnap
+go build -o ./bin/virsnap ./cmd/virsnap
+sudo install ./bin/virsnap /usr/local/bin/virsnap
 ```
 
 This will compile and link the virsnap binary and install it into
