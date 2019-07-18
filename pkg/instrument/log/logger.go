@@ -65,6 +65,7 @@ func (cfg Configuration) NewLogger() (*zap.Logger, error) {
 		switch cfg.Encoding {
 		case "console":
 			zc.Encoding = "console"
+			zc.EncoderConfig = zap.NewDevelopmentEncoderConfig()
 		case "json":
 			zc.Encoding = "json"
 		default:
