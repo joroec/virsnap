@@ -21,8 +21,9 @@ Available Commands:
   version     Print the version of the software
 
 Flags:
-  -h, --help      help for virsnap
-  -v, --verbose   verbose output
+  -h, --help                  help for virsnap
+  -e, --log-encoding string   sets the log encoding (console, json) (default "console")
+  -l, --log-level string      sets the log level (debug, info, warn, error) (default "info")
 
 Use "virsnap [command] --help" for more information about a command.
 ```
