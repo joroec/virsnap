@@ -30,6 +30,10 @@ var (
 	logEncoding = "console"
 )
 
+// initLogger initializes a logger according to provided flags or their default
+// values. This needs to be run as PersistenPreRun since those values
+// need to be set when application is started, not when the package is imported
+// (thus it can't be part of init()).
 func initLogger(cmd *cobra.Command, args []string) {
 	cfg := log.Configuration{
 		Level:    logLevel,
