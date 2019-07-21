@@ -15,7 +15,7 @@ import (
 
 	"github.com/libvirt/libvirt-go"
 	libvirtxml "github.com/libvirt/libvirt-go-xml"
-	"go.uber.org/zap"
+	_ "go.uber.org/zap"
 )
 
 // -----------------------------------------------------------------------------
@@ -25,7 +25,7 @@ import (
 type VM struct {
 	Instance   libvirt.Domain
 	Descriptor libvirtxml.Domain
-	Logger     *zap.SugaredLogger
+	Logger     Logger
 }
 
 // Free ist just a convenience function to free the associated libvirt.Domain
@@ -513,7 +513,7 @@ func (vm *VM) Transition(to libvirt.DomainState, forceShutdown bool,
 // matches at least one of the regular expressions are returned. The caller is
 // responsible for calling FreeVMs on the returned slice to free any
 // buffer in libvirt. The returned VMs are sorted lexically by name.
-func ListMatchingVMs(log *zap.SugaredLogger, regexes []string) ([]VM, error) {
+func ListMatchingVMs(log Logger, regexes []string) ([]VM, error) {
 	// argument validity checking
 	exprs := make([]*regexp.Regexp, 0, len(regexes))
 	for _, arg := range regexes {
@@ -631,7 +631,7 @@ func (s *VMSorter) Swap(i int, j int) {
 // FreeVMs is a function that takes a slice of VMs and frees any associated
 // libvirt.Domain. Usually, this is called after ListMatchingVMs with a
 // "defer" statement.
-func FreeVMs(log *zap.SugaredLogger, vms []VM) {
+func FreeVMs(log Logger, vms []VM) {
 	for _, vm := range vms {
 		err := vm.Instance.Free()
 		if err != nil {
