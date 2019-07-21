@@ -2,13 +2,16 @@
 // Licensed under the MIT License. You have obtained a copy of the License at
 // the "LICENSE" file in this repository.
 
-// Package cmd implements the handlers for the different command line arguments.
-package cmd
+package main
 
 import (
 	"fmt"
 
 	"github.com/spf13/cobra"
+)
+
+const (
+	version = "0.1.0"
 )
 
 // versionCmd is a global variable defining the corresponding cobra command
@@ -29,5 +32,5 @@ func init() {
 // that we want to end up here. This functions does noting except printing
 // the current version number.
 func versionRun(cmd *cobra.Command, args []string) {
-	fmt.Println("virsnap, version 0.1.0")
+	fmt.Printf("virsnap, version %s\n", version)
 }

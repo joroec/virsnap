@@ -2,8 +2,8 @@
 // Licensed under the MIT License. You have obtained a copy of the License at
 // the "LICENSE" file in this repository.
 
-// Package cmd implements the handlers for the different command line arguments.
-package cmd
+// Package mainimplements the handlers for the different command line arguments.
+package main
 
 import (
 	"bufio"
@@ -11,37 +11,41 @@ import (
 	"os"
 	"strings"
 
-	"github.com/spf13/cobra"
-
 	"github.com/joroec/virsnap/pkg/virt"
-	log "github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
 )
 
-// keepVersions is a global variable determing how many successive snapshot
-// of the VM should be kept before beginning to remove the old ones.
-var keepVersions int
+const (
+	errNoVMsMatchingRegex = "no virtual machines found matching provided regex"
+)
 
-// assumeYes is a global variable determing whether snapshots should be deleted
-// without additional confirmation.
-var assumeYes bool
+var (
+	// keepVersions is a global variable determing how many successive snapshot
+	// of the VM should be kept before beginning to remove the old ones.
+	keepVersions int
 
-// cleanCmd is a global variable defining the corresponding cobra command
-var cleanCmd = &cobra.Command{
-	Use:   "clean [-y] -k <keep> <regex1> [<regex2>] [<regex3>] ...",
-	Short: "Remove expired snapshots from the system",
-	Long: "Remove expired snapshots from the system. The parameter k " +
-		"specifies how many successive snapshots of a VM should be kept before " +
-		"beginning to remove the old ones. For example, if you take a snapshot " +
-		"every day over a time of 30 days and then call clean with an k of 15, " +
-		"the oldest 15 snapshots that were created by libvirt get removed. The " +
-		"regular expression(s) determine the VM names of those VM whose " +
-		"snapshots should get cleaned. For example, 'virsnap clean -k 10 \".*\"' " +
-		"cleans the snapshots of all found virtual machines, whereas " +
-		"'virsnap clean -k 10 \"testing\"' cleans the snapshots only for those " +
-		"virtial machines whose name includes \"testing\". ",
-	Args: cobra.MinimumNArgs(1),
-	Run:  cleanRun,
-}
+	// assumeYes is a global variable determing whether snapshots should be deleted
+	// without additional confirmation.
+	assumeYes bool
+
+	// cleanCmd is a global variable defining the corresponding cobra command
+	cleanCmd = &cobra.Command{
+		Use:   "clean [-y] -k <keep> <regex1> [<regex2>] [<regex3>] ...",
+		Short: "Remove expired snapshots from the system",
+		Long: "Remove expired snapshots from the system. The parameter k " +
+			"specifies how many successive snapshots of a VM should be kept before " +
+			"beginning to remove the old ones. For example, if you take a snapshot " +
+			"every day over a time of 30 days and then call clean with an k of 15, " +
+			"the oldest 15 snapshots that were created by libvirt get removed. The " +
+			"regular expression(s) determine the VM names of those VM whose " +
+			"snapshots should get cleaned. For example, 'virsnap clean -k 10 \".*\"' " +
+			"cleans the snapshots of all found virtual machines, whereas " +
+			"'virsnap clean -k 10 \"testing\"' cleans the snapshots only for those " +
+			"virtial machines whose name includes \"testing\". ",
+		Args: cobra.MinimumNArgs(1),
+		Run:  cleanRun,
+	}
+)
 
 // init is a special golang function that is called exactly once regardless
 // how often the package is imported.
@@ -63,25 +67,24 @@ func init() {
 func cleanRun(cmd *cobra.Command, args []string) {
 	// check the validity of the console line parameters
 	if keepVersions < 0 {
-		log.Fatal("The parameter k must not be negative!")
+		logger.Fatal("parameter k must not be negative")
 	}
 
-	vms, err := virt.ListMatchingVMs(args)
+	vms, err := virt.ListMatchingVMs(logger, args)
 	if err != nil {
-		log.Fatal("Could not retrieve the virtual machines.")
+		logger.Fatalf("unable to retrieve virtual machines: %s", err)
 	}
 
-	defer virt.FreeVMs(vms)
+	defer virt.FreeVMs(logger, vms)
 
 	if len(vms) == 0 {
-		log.Info("There were no virtual machines matchig the given regular " +
-			"expression(s).")
+		logger.Info(errNoVMsMatchingRegex)
 		return
 	}
-	log.Debugf("Found %d matching VMs.", len(vms))
+	logger.Debugf("found %d matching VMs", len(vms))
 
 	if assumeYes {
-		log.Debugf("Remove snapshots without any further confirmation.")
+		logger.Debugf("removing snapshots without any further confirmation")
 	}
 
 	// a boolean indicating whether at least one error occured. Useful for
@@ -93,14 +96,16 @@ func cleanRun(cmd *cobra.Command, args []string) {
 		// iterate over the domains and clean the snapshots for each of it
 		snapshots, err := vm.ListMatchingSnapshots([]string{".*"})
 		if err != nil {
-			log.Errorf("Could not get the snapshot for VM \"%s\". Skipping this "+
-				"VM: %v", vm.Descriptor.Name, err)
+			logger.Errorf("skpping VM '%s': error, unable to get snapshot: %s",
+				vm.Descriptor.Name,
+				err,
+			)
 			failed = true
 			continue
 		}
 
 		func() { // anonymous function for not calling snapshot.Free in a loop
-			defer virt.FreeSnapshots(snapshots)
+			defer virt.FreeSnapshots(logger, snapshots)
 
 			if len(snapshots) <= keepVersions {
 				return
@@ -109,8 +114,10 @@ func cleanRun(cmd *cobra.Command, args []string) {
 			// iterate over the snapshot exceeding the k snapshots that should
 			// remain
 			for i := 0; i < len(snapshots)-keepVersions; i++ {
-				log.Infof("About to remove snapshot \"%s\" of VM \"%s\".",
-					snapshots[i].Descriptor.Name, vm.Descriptor.Name)
+				logger.Infof("removing snapshot '%s' of VM '%s'.",
+					snapshots[i].Descriptor.Name,
+					vm.Descriptor.Name,
+				)
 
 				accepted := false
 				if assumeYes {
@@ -120,27 +127,34 @@ func cleanRun(cmd *cobra.Command, args []string) {
 				}
 
 				if accepted {
-					log.Infof("Removing snapshot \"%s\" of VM \"%s\".",
-						snapshots[i].Descriptor.Name, vm.Descriptor.Name)
+					logger.Infof("removing snapshot '%s' of VM '%s'.",
+						snapshots[i].Descriptor.Name,
+						vm.Descriptor.Name,
+					)
 
 					err = snapshots[i].Instance.Delete(0)
 					if err != nil {
-						log.Errorf("Could not remove snapshot \"%s\" of VM \"%s\". "+
-							"Skipping this VM: %v", snapshots[i].Descriptor.Name,
-							vm.Descriptor.Name, err)
+						logger.Errorf("skipping VM '%s': error, unable to remove snapshot '%s' of VM '%s': %s",
+							vm.Descriptor.Name,
+							snapshots[i].Descriptor.Name,
+							err,
+						)
 						failed = true
 						return // we are in an anonymous function
 					}
 				} else {
-					log.Infof("Skipping removal of snapshot \"%s\" of VM \"%s\".",
-						snapshots[i].Descriptor.Name, vm.Descriptor.Name)
+					logger.Infof("skipping removal of snapshot '%s' of VM '%s'",
+						snapshots[i].Descriptor.Name,
+						vm.Descriptor.Name,
+					)
 				}
 			}
 		}()
 	}
-
+	// TODO (obitech): improve error handling
+	// See: https://blog.golang.org/errors-are-values
 	if failed {
-		log.Fatal("There were some errors during the clean process.")
+		logger.Fatal("clean process failed due to errors")
 	}
 }
 
@@ -156,7 +170,7 @@ func confirm(s string, tries int) bool {
 
 		res, err := r.ReadString('\n')
 		if err != nil {
-			log.Fatal(err)
+			logger.Fatal(err)
 		}
 
 		// Empty input (i.e. "\n")

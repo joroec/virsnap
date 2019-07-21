@@ -2,47 +2,44 @@
 // Licensed under the MIT License. You have obtained a copy of the License at
 // the "LICENSE" file in this repository.
 
-// Package cmd implements the handlers for the different command line arguments.
-package cmd
+package main
 
 import (
+	"github.com/joroec/virsnap/pkg/virt"
 	"github.com/libvirt/libvirt-go"
 	"github.com/spf13/cobra"
-
-	log "github.com/sirupsen/logrus"
-
-	"github.com/joroec/virsnap/pkg/virt"
 )
 
-// shutdown is a global variable determing whether virsnap should try to
-// shutdown the virtual machine before taking the snapshot
-var shutdown bool
+var (
+	// shutdown is a global variable determing whether virsnap should try to
+	// shutdown the virtual machine before taking the snapshot
+	shutdown bool
 
-// force is a global variable determing whether virsnap should force the
-// shutdown of virtual machine before taking the snapshot
-var force bool
+	// force is a global variable determing whether virsnap should force the
+	// shutdown of virtual machine before taking the snapshot
+	force bool
 
-// timeout is a global variable determing the timeout in minutes to wait for a
-// graceful shutdown before forcing the shutdown if enabled or returning with
-// an error code
-var timeout int
+	// timeout is a global variable determing the timeout in minutes to wait for a
+	// graceful shutdown before forcing the shutdown if enabled or returning with
+	// an error code
+	timeout int
 
-// createCmd is a global variable defining the corresponding cobra command
-var createCmd = &cobra.Command{
-	Use:   "create <regex1> [<regex2>] [<regex3>] ...",
-	Short: "Create a snapshot of one or more virtual machines",
-	Long: "Create a new snapshot for any found virtual machine with a name " +
-		"matching at least one of the given regular expressions. For example, " +
-		"'virsnap create \".*\"' creates a new snapshot for all found virtual " +
-		"machines, whereas 'virsnap create \"testing\"' creates a new snapshot " +
-		"only for those virtial machines whose name includes \"testing\". The " +
-		"snapshot will be assigned a random name. In any case, the name starts " +
-		"with the prefix 'virsnap_'. virsnap expects the virtual machines " +
-		"configured according to the personal snapshot preferences. If you want " +
-		"to use QCOW2 internal snapshots, for example, edit the VM's XML " +
-		"descriptor ('virsh edit <vm_name>') of the VM so that the default " +
-		"snapshot behavior uses internal snapshots. Example: \n" +
-		` 
+	// createCmd is a global variable defining the corresponding cobra command
+	createCmd = &cobra.Command{
+		Use:   "create <regex1> [<regex2>] [<regex3>] ...",
+		Short: "Create a snapshot of one or more virtual machines",
+		Long: "Create a new snapshot for any found virtual machine with a name " +
+			"matching at least one of the given regular expressions. For example, " +
+			"'virsnap create \".*\"' creates a new snapshot for all found virtual " +
+			"machines, whereas 'virsnap create \"testing\"' creates a new snapshot " +
+			"only for those virtial machines whose name includes \"testing\". The " +
+			"snapshot will be assigned a random name. In any case, the name starts " +
+			"with the prefix 'virsnap_'. virsnap expects the virtual machines " +
+			"configured according to the personal snapshot preferences. If you want " +
+			"to use QCOW2 internal snapshots, for example, edit the VM's XML " +
+			"descriptor ('virsh edit <vm_name>') of the VM so that the default " +
+			"snapshot behavior uses internal snapshots. Example: \n" +
+			`
 <disk type='file' device='disk' snapshot='internal'>
   <driver name='qemu' type='qcow2'/>
   <source file='/.../testing.qcow2'/>
@@ -51,9 +48,10 @@ var createCmd = &cobra.Command{
   <alias name='ide0-0-0'/>
   <address type='drive' controller='0' bus='0' target='0' unit='0'/>
 </disk>`,
-	Args: cobra.MinimumNArgs(1),
-	Run:  createRun,
-}
+		Args: cobra.MinimumNArgs(1),
+		Run:  createRun,
+	}
+)
 
 // init is a special golang function that is called exactly once regardless
 // how often the package is imported.
@@ -80,23 +78,22 @@ func init() {
 func createRun(cmd *cobra.Command, args []string) {
 	// check the validity of the console line parameters
 	if force && !shutdown {
-		log.Fatal("The flag -f can only be specified if -s was specified!")
+		logger.Fatal("flag -f can only be specified if -s was specified!")
 	}
 
 	if timeout <= 0 {
-		log.Fatal("Invalid timeout specified. Must be greater than zero!")
+		logger.Fatal("nvalid timeout specified. Must be greater than zero!")
 	}
 
-	vms, err := virt.ListMatchingVMs(args)
+	vms, err := virt.ListMatchingVMs(logger, args)
 	if err != nil {
-		log.Fatal("Could not retrieve the virtual machines.")
+		logger.Fatal("could not retrieve virtual machines.")
 	}
 
-	defer virt.FreeVMs(vms)
+	defer virt.FreeVMs(logger, vms)
 
 	if len(vms) == 0 {
-		log.Info("There were no virtual machines matchig the given regular " +
-			"expression(s).")
+		logger.Info(errNoVMsMatchingRegex)
 		return
 	}
 
@@ -110,23 +107,26 @@ func createRun(cmd *cobra.Command, args []string) {
 		if shutdown {
 			formerState, err = vm.Transition(libvirt.DOMAIN_SHUTOFF, force, timeout)
 			if err != nil {
-				log.Error(err)
+				logger.Error(err)
 				failed = true
 				continue
 			}
 		}
 
-		log.Debugf("Beginning creation of snapshot for VM \"%s\".",
-			vm.Descriptor.Name)
+		logger.Debugf("Beginning creation of snapshot for VM '%s'.",
+			vm.Descriptor.Name,
+		)
 
 		snapshot, err := vm.CreateSnapshot("virsnap_",
 			"snapshot created by virnsnap")
 		if err == nil {
-			log.Infof("Created snapshot \"%s\" for VM \"%s\".",
+			logger.Infof("Created snapshot '%s' for VM '%s'",
 				snapshot.Descriptor.Name, vm.Descriptor.Name)
 		} else {
-			log.Errorf("Could not create snapshot for VM: \"%s\": %v",
-				vm.Descriptor.Name, err)
+			logger.Errorf("unable to create snapshot for VM: '%s': %s",
+				vm.Descriptor.Name,
+				err,
+			)
 			failed = true
 			// no continue here, since we want to startup the VM is any case!
 		}
@@ -135,34 +135,45 @@ func createRun(cmd *cobra.Command, args []string) {
 			defer snapshot.Free()
 
 			if shutdown {
-				log.Debugf("Restoring previous state of vm \"%s\"", vm.Descriptor.Name)
+				logger.Debugf("Restoring previous state of vm '%s'",
+					vm.Descriptor.Name,
+				)
 				_, err = vm.Transition(formerState, force, timeout)
 				if err != nil {
-					log.Errorf("Could not restore the state \"%s\" of VM \"%s\".",
-						virt.GetStateString(formerState), vm.Descriptor.Name)
+					logger.Errorf("unable to restore state '%s' of VM '%s': %s",
+						virt.GetStateString(formerState),
+						vm.Descriptor.Name,
+						err,
+					)
 					failed = true
 
 					newState, err := vm.GetCurrentStateString()
 					if err != nil {
-						log.Errorf("Could not retrieve the current state of the VM %s: %v ",
-							vm.Descriptor.Name, err)
+						logger.Errorf("unable to retrieve current state of VM ;;'%s': %s ",
+							vm.Descriptor.Name,
+							err,
+						)
 						return // we are in an anonymous function
 					}
 
-					log.Errorf("Sate of VM \"%s\" is now \"%s\".", vm.Descriptor.Name,
+					logger.Warnf("state of VM '%s' is now '%s'", vm.Descriptor.Name,
 						newState)
 					return // we are in an anonymous function
 				}
 			}
 
-			log.Debugf("Leaving creation of snapshot \"%s\" for VM \"%s\".",
-				snapshot.Descriptor.Name, vm.Descriptor.Name)
+			logger.Debugf("Finished creation of snapshot '%s' for VM '%s'.",
+				snapshot.Descriptor.Name,
+				vm.Descriptor.Name,
+			)
 		}()
 
 	}
 
+	// TODO (obitech): improve error handling
+	// See: https://blog.golang.org/errors-are-values
 	if failed {
-		log.Fatal("There were some errors during creation of the snapshots.")
+		logger.Fatal("create process failed due to errors")
 	}
 
 }

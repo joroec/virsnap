@@ -21,8 +21,9 @@ Available Commands:
   version     Print the version of the software
 
 Flags:
-  -h, --help      help for virsnap
-  -v, --verbose   verbose output
+  -h, --help                  help for virsnap
+  -e, --log-encoding string   sets the log encoding (console, json) (default "console")
+  -l, --log-level string      sets the log level (debug, info, warn, error) (default "info")
 
 Use "virsnap [command] --help" for more information about a command.
 ```
@@ -145,8 +146,8 @@ To install virsnap, execute the following in your shell:
 ```shell
 git clone http://github.com/joroec/virsnap
 cd virsnap
-go build
-sudo install virsnap /usr/local/bin/virsnap
+go build -o ./bin/virsnap ./cmd/virsnap
+sudo install ./bin/virsnap /usr/local/bin/virsnap
 ```
 
 This will compile and link the virsnap binary and install it into
