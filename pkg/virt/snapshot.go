@@ -14,7 +14,6 @@ import (
 	"github.com/docker/docker/pkg/namesgenerator"
 	"github.com/libvirt/libvirt-go"
 	libvirtxml "github.com/libvirt/libvirt-go-xml"
-	_ "go.uber.org/zap"
 )
 
 // -----------------------------------------------------------------------------
