@@ -2,7 +2,7 @@
 // Licensed under the MIT License. You have obtained a copy of the License at
 // the "LICENSE" file in this repository.
 
-// Package mainimplements the handlers for the different command line arguments.
+// Package main implements the handlers for the different command line arguments.
 package main
 
 import (
