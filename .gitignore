@@ -5,7 +5,7 @@
 *.so
 *.dylib
 /virsnap
-/bin/*
+/bin/virsnap
 
 # Test binary, build with `go test -c`
 *.test
