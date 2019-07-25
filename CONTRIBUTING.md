@@ -13,8 +13,8 @@ git clone git@github.com:$user/virsnap.git
 # or: git clone https://github.com/$user/virsnap.git
 
 # Set remote
-git remote add upstream git@github.com/joroec/virsnap.git
-# or: git remote add upstream https://github.com/joroeck/virsnap.git
+git remote add upstream git@github.com:joroec/virsnap.git
+# or: git remote add upstream https://github.com/joroec/virsnap.git
 
 # Don't push to upstream
 git remote set-url --push upstream no_push
