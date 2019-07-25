@@ -28,6 +28,7 @@ var (
 	logger      *zap.SugaredLogger
 	logLevel    = "info"
 	logEncoding = "console"
+  socketURL   = "qemu:///system"
 )
 
 // initLogger initializes a logger according to provided flags or their default
@@ -63,4 +64,5 @@ func init() {
 	f := RootCmd.PersistentFlags()
 	f.StringVarP(&logLevel, "log-level", "l", logLevel, "sets the log level (debug, info, warn, error)")
 	f.StringVarP(&logEncoding, "log-encoding", "e", logEncoding, "sets the log encoding (console, json)")
+  f.StringVarP(&socketURL, "socket-url", "u", socketURL, "sets the libvirt socket URL to connect to")
 }

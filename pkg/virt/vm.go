@@ -508,11 +508,13 @@ func (vm *VM) Transition(to libvirt.DomainState, forceShutdown bool,
 
 // ListMatchingVMs is a method that allows to retrieve information about
 // virtual machines that can be accessed via libvirt. The first parameter
+// specifies the logger to be used to output warnings. The second parameter
 // specifies a slice of regular expressions. Only virtual machines whose name
-// matches at least one of the regular expressions are returned. The caller is
-// responsible for calling FreeVMs on the returned slice to free any
+// matches at least one of the regular expressions are returned. The third
+// parameter is the libvirt/qemu socket URL to connect to.
+// The caller is responsible for calling FreeVMs on the returned slice to free any
 // buffer in libvirt. The returned VMs are sorted lexically by name.
-func ListMatchingVMs(log Logger, regexes []string) ([]VM, error) {
+func ListMatchingVMs(log Logger, regexes []string, socketURL string) ([]VM, error) {
 	// argument validity checking
 	exprs := make([]*regexp.Regexp, 0, len(regexes))
 	for _, arg := range regexes {
@@ -530,7 +532,7 @@ func ListMatchingVMs(log Logger, regexes []string) ([]VM, error) {
 	}
 
 	// trying to connect to QEMU socket...
-	conn, err := libvirt.NewConnect("qemu:///system")
+	conn, err := libvirt.NewConnect(socketURL)
 	if err != nil {
 		err = fmt.Errorf("unable to connect to QEMU socket: %s", err)
 		return nil, err
