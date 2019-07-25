@@ -78,8 +78,7 @@ func cleanRun(cmd *cobra.Command, args []string) {
 	defer virt.FreeVMs(logger, vms)
 
 	if len(vms) == 0 {
-		logger.Info(errNoVMsMatchingRegex)
-		return
+		logger.Fatal(errNoVMsMatchingRegex)
 	}
 	logger.Debugf("found %d matching VMs", len(vms))
 

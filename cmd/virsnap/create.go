@@ -94,8 +94,7 @@ func createRun(cmd *cobra.Command, args []string) {
 	defer virt.FreeVMs(logger, vms)
 
 	if len(vms) == 0 {
-		logger.Info(errNoVMsMatchingRegex)
-		return
+		logger.Fatal(errNoVMsMatchingRegex)
 	}
 
 	// a boolean indicating whether at least one error occured. Useful for
