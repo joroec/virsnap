@@ -48,14 +48,14 @@ func listRun(cmd *cobra.Command, args []string) {
 
 	if len(args) > 0 {
 		logger.Debug("Using regular expression specified as command line argument: %#v", args)
-		vms, err = virt.ListMatchingVMs(logger, args)
+		vms, err = virt.ListMatchingVMs(logger, args, socketURL)
 	} else {
 		// listvms should display any virtual machine found. So, we need to specify
 		// a search regex that matches any virtual machine name.
 		logger.Debug("Using default regular expression '.*', since no regular " +
 			"expression was specified as command line argument")
 		regex := []string{".*"}
-		vms, err = virt.ListMatchingVMs(logger, regex)
+		vms, err = virt.ListMatchingVMs(logger, regex, socketURL)
 	}
 
 	if err != nil {

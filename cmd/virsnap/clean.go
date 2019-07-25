@@ -70,7 +70,7 @@ func cleanRun(cmd *cobra.Command, args []string) {
 		logger.Fatal("parameter k must not be negative")
 	}
 
-	vms, err := virt.ListMatchingVMs(logger, args)
+	vms, err := virt.ListMatchingVMs(logger, args, socketURL)
 	if err != nil {
 		logger.Fatalf("unable to retrieve virtual machines: %s", err)
 	}
