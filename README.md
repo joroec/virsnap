@@ -132,22 +132,22 @@ First make sure libvirt is installed. You can use your local packet manager or [
 
 On Ubuntu, you can use apt:
 ```shell
-sudo apt-get install libvirt-bin libvirt-dev
+$ sudo apt-get install libvirt-bin libvirt-dev
 ```
 
 On macOS, you can use Homebrew:
 
 ```shell
-brew install libvirt
+$ brew install libvirt
 ```
 
 To install virsnap, execute the following in your shell:
 
 ```shell
-git clone http://github.com/joroec/virsnap
-cd virsnap
-go build -o ./bin/virsnap ./cmd/virsnap
-sudo install ./bin/virsnap /usr/local/bin/virsnap
+$ git clone http://github.com/joroec/virsnap
+$ cd virsnap
+$ go build -o ./bin/virsnap ./cmd/virsnap
+$ sudo install ./bin/virsnap /usr/local/bin/virsnap
 ```
 
 This will compile and link the virsnap binary and install it into
@@ -156,7 +156,7 @@ This will compile and link the virsnap binary and install it into
 To remove the tool from your system, execute the following in your shell:
 
 ```shell
-sudo rm /usr/local/bin/virsnap
+$ sudo rm /usr/local/bin/virsnap
 ```
 
 ## Periodical snapshots
@@ -180,22 +180,22 @@ $ systemctl status virsnap
 
 Test a single execution of virsnap if desired:
 ```shell
-systemctl start virsnap
+$ systemctl start virsnap
 ```
 
 You can watch the logs with:
 ```shell
-journalctl -u virsnap
+$ journalctl -u virsnap
 ```
 
 Start periodic execution:
 ```shell
-systemctl start virsnap.timer
+$ systemctl start virsnap.timer
 ```
 
 Check if the timer is activated:
 ```shell
-systemctl status virsnap.timer
+$ systemctl status virsnap.timer
 ```
 
 ## Contributing
@@ -230,6 +230,7 @@ Start with downloading the golang source code:
 ```shell
 $ sudo apt-get update && sudo apt-get upgrade
 $ git clone https://github.com/golang/go
+$ cd go
 ```
 
 Now, build the bootstrap compiler:
@@ -248,11 +249,11 @@ $ cp -r go /tmp/go-bootstrap
 
 Now, change back to the desired release brach and compile the golang compiler:
 ```
-cd go
-git checkout go1.12.6
-git clean -df
-cd src
-GOROOT_BOOTSTRAP=/tmp/go-bootstrap GOROOT_FINAL=/usr/local/lib/go GOBIN=/usr/local/bin ./make.bash
+$ cd go
+$ git checkout go1.12.6
+$ git clean -df
+$ cd src
+$ GOROOT_BOOTSTRAP=/tmp/go-bootstrap GOROOT_FINAL=/usr/local/lib/go GOBIN=/usr/local/bin ./make.bash
 Building Go cmd/dist using /tmp/go-bootstrap.
 Building Go toolchain1 using /tmp/go-bootstrap.
 Building Go bootstrap cmd/go (go_bootstrap) using Go toolchain1.
@@ -270,22 +271,22 @@ In the last step, you need to install your newly compiled go compiler to your
 system:
 
 ```shell
-cd ../../
-sudo cp -r go /usr/local/lib/go
-sudo ln -s /usr/local/lib/go/bin/go /usr/local/bin/go
-sudo ln -s /usr/local/lib/go/bin/gofmt /usr/local/bin/gofmt
+$ cd ../../
+$ sudo cp -r go /usr/local/lib/go
+$ sudo ln -s /usr/local/lib/go/bin/go /usr/local/bin/go
+$ sudo ln -s /usr/local/lib/go/bin/gofmt /usr/local/bin/gofmt
 ```
 
 To clean your system from the intermediate products and repositories, you can
 execute the following commands:
 ```
-rm -rf /tmp/go-bootstrap
-rm -rf go
+$ rm -rf /tmp/go-bootstrap
+$ rm -rf go
 ```
 
 Finally, you can set up your [golang workspace]:
 ```shell
-mkdir ~/.go-workspace
+$ mkdir ~/.go-workspace
 ```
 
 and add to your `~/.bash_profile` / `.zshrc`:
