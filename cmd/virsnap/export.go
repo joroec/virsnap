@@ -6,13 +6,17 @@
 package main
 
 import (
+	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 
 	"github.com/joroec/virsnap/pkg/virt"
 	"github.com/libvirt/libvirt-go"
 	"github.com/spf13/cobra"
 	"golang.org/x/sys/unix"
+
+	libvirtxml "github.com/libvirt/libvirt-go-xml"
 )
 
 var (
@@ -61,6 +65,7 @@ func exportRun(cmd *cobra.Command, args []string) {
 		logger.Fatalf("could not parse outputDir filepath: %v", err)
 	}
 
+	// TODO: TOCTOU race condition?
 	stat, err := os.Stat(absOutputDir)
 	if err == nil {
 		if os.IsNotExist(err) {
@@ -132,7 +137,53 @@ func exportRun(cmd *cobra.Command, args []string) {
 		}
 
 		// export the VM
-		// TODO: implement
+
+		// get the XML descriptor
+		xml, err := vm.Instance.GetXMLDesc(0)
+		if err != nil {
+			err = fmt.Errorf("unable to get XML descriptor of VM: %s", err)
+			logger.Warnf("Skipping VM: %s", err)
+			continue
+		}
+
+		descriptor := libvirtxml.Domain{}
+		err = descriptor.Unmarshal(xml)
+		if err != nil {
+			err = fmt.Errorf("unable to unmarshal XML descriptor of VM: %s", err)
+			logger.Warnf("Skipping VM: %s", err)
+			continue
+		}
+
+		// create the output directory for the VM if not already existing
+		// TODO: sanitize name
+		// TODO: TOCTOU race condition?
+		vmOutputDir := path.Join(absOutputDir, descriptor.Name)
+		stat, err = os.Stat(vmOutputDir)
+		if err == nil {
+			if os.IsNotExist(err) {
+				// if path does not already exist: try to create target directory.
+				err = os.Mkdir(vmOutputDir, 0700)
+				if err != nil {
+					err = fmt.Errorf("could not create vm output directory %s: %v",
+						vmOutputDir, err)
+					logger.Warnf("Skipping VM: %s", err)
+					continue
+				}
+			} else {
+				// another error occured
+				err = fmt.Errorf("could not parse outputDir filepath: %v", err)
+				logger.Warnf("Skipping VM: %s", err)
+				continue
+			}
+		}
+
+		// loop over HDDs and store them using differential file sync
+		for _, disk := range descriptor.Devices.Disks {
+			// TODO: Continue implementation
+			fmt.Println(disk)
+		}
+
+		// transform descriptor and store it
 
 		// restore previous state
 		logger.Debugf("restoring previous state of vm '%s'", vm.Descriptor.Name)

@@ -118,7 +118,7 @@ func cleanRun(cmd *cobra.Command, args []string) {
 					vm.Descriptor.Name,
 				)
 
-				accepted := false
+				var accepted bool
 				if assumeYes {
 					accepted = true
 				} else {
