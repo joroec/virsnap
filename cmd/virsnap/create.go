@@ -75,7 +75,8 @@ func init() {
 	RootCmd.AddCommand(createCmd)
 }
 
-// createRun takes as parameter the name of the VMs to create a snapshot for
+// createRun takes as parameter the regular expressions of the names of the VMs
+// to create a snapshot for
 func createRun(cmd *cobra.Command, args []string) {
 	// check the validity of the console line parameters
 	if force && !shutdown {

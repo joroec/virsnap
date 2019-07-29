@@ -33,8 +33,6 @@ func (vm *VM) Export(outputDirectory string, logger Logger) error {
 		return err
 	}
 
-	// TODO: TOCTOU race condition?
-
 	// create the output directory for the VM if not already existing
 	sanVMName := sanitize.BaseName(descriptor.Name)
 
@@ -46,26 +44,22 @@ func (vm *VM) Export(outputDirectory string, logger Logger) error {
 
 	// loop over HDDs and store them using differential file sync
 	for _, disk := range descriptor.Devices.Disks {
-
 		filepath := disk.Source.File.File
 		if filepath == "" {
-			err = fmt.Errorf("could not get filepath of disk %s", disk.Target)
-			logger.Warnf("Skipping the disk: %s", err)
+			logger.Errorf("could not get filepath of disk %s", disk.Target)
 			continue
 		}
 
 		filename := path.Base(filepath)
-		err = fs.Sync(filepath, path.Join(vmOutputDir, filename))
-		if err != nil {
-			err = fmt.Errorf("could sync the disk %s: %v", filepath, err)
-			logger.Warnf("Skipping the disk: %s", err)
-			continue
-		}
 
 		// transform descriptor
-		// TODO: das geht auch nocht nicht! Irgendwie mit Pointern arbeiten!
-		disk.Source.File.File = "./ssssssssss" + filename
+		disk.Source.File.File = "./" + filename
 
+		// sync file
+		err = fs.Sync(filepath, path.Join(vmOutputDir, filename))
+		if err != nil {
+			logger.Errorf("could sync the disk %s: %v", filepath, err)
+		}
 	}
 
 	// store new descriptor alongside the disk files
@@ -75,6 +69,7 @@ func (vm *VM) Export(outputDirectory string, logger Logger) error {
 		return err
 	}
 
+	// Create descriptor file if not existent, overwrite of existent
 	file, err := os.Create(path.Join(vmOutputDir, "descriptor.xml"))
 	if err != nil {
 		err = fmt.Errorf("could not open new descriptor file: %v", err)
