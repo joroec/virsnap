@@ -14,11 +14,13 @@ import (
 	"github.com/joroec/virsnap/pkg/fs"
 	"github.com/kennygrant/sanitize"
 
+	"github.com/joroec/virsnap/pkg/instrument/log"
+
 	libvirtxml "github.com/libvirt/libvirt-go-xml"
 )
 
 // Export is a function that exports a given VM.
-func (vm *VM) Export(outputDirectory string, logger Logger) error {
+func (vm *VM) Export(outputDirectory string, logger log.Logger) error {
 	// get the XML descriptor
 	xml, err := vm.Instance.GetXMLDesc(0)
 	if err != nil {
@@ -34,7 +36,7 @@ func (vm *VM) Export(outputDirectory string, logger Logger) error {
 	}
 
 	// create the output directory for the VM if not already existing
-	sanVMName := sanitize.BaseName(descriptor.Name)
+	sanVMName := sanitize.BaseName(vm.Descriptor.Name)
 
 	vmOutputDir := path.Join(outputDirectory, sanVMName)
 	err = fs.EnsureDirectory(vmOutputDir)
@@ -44,9 +46,14 @@ func (vm *VM) Export(outputDirectory string, logger Logger) error {
 
 	// loop over HDDs and store them using differential file sync
 	for _, disk := range descriptor.Devices.Disks {
+		// only observe disks, not cdroms
+		if disk.Device != "disk" {
+			continue
+		}
+
 		filepath := disk.Source.File.File
 		if filepath == "" {
-			logger.Errorf("could not get filepath of disk %s", disk.Target)
+			logger.Errorf("could not get filepath of disk '%s'", disk.Target)
 			continue
 		}
 
@@ -56,20 +63,20 @@ func (vm *VM) Export(outputDirectory string, logger Logger) error {
 		disk.Source.File.File = "./" + filename
 
 		// sync file
-		err = fs.Sync(filepath, path.Join(vmOutputDir, filename))
+		err = fs.Sync(filepath, path.Join(vmOutputDir, filename), logger)
 		if err != nil {
-			logger.Errorf("could sync the disk %s: %v", filepath, err)
+			logger.Errorf("could sync the disk '%s': %v", filepath, err)
 		}
 	}
 
 	// store new descriptor alongside the disk files
 	xmldoc, err := descriptor.Marshal()
 	if err != nil {
-		err = fmt.Errorf("could marshal the new descriptor %v: %v", descriptor, err)
+		err = fmt.Errorf("could marshal the new descriptor '%v': %v", descriptor, err)
 		return err
 	}
 
-	// Create descriptor file if not existent, overwrite of existent
+	// create descriptor file if not existent, overwrite of existent
 	file, err := os.Create(path.Join(vmOutputDir, "descriptor.xml"))
 	if err != nil {
 		err = fmt.Errorf("could not open new descriptor file: %v", err)

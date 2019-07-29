@@ -25,6 +25,13 @@ func EnsureDirectory(path string) error {
 				err = fmt.Errorf("could not create directory %s: %s", path, err)
 				return err
 			}
+
+			// call stat again after directory was created
+			stat, err = os.Stat(path)
+			if err != nil {
+				err = fmt.Errorf("could not stat directory %s: %s", path, err)
+				return err
+			}
 		} else {
 			return err
 		}

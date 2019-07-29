@@ -2,9 +2,8 @@
 // Licensed under the MIT License. You have obtained a copy of the License at
 // the "LICENSE" file in this repository.
 
-// Package virt implements high-level functions for handling virtual machines
-// (VMS) that use the more low-level libvirt functions internally.
-package virt
+// Package log provides logging directives.
+package log
 
 // Logger interface provides an abstraction over different loggers
 // that can be used with the application.

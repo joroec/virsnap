@@ -66,7 +66,7 @@ func exportRun(cmd *cobra.Command, args []string) {
 	// check the validity of the console line parameters
 	absOutputDir, err := filepath.Abs(outputDir)
 	if err != nil {
-		logger.Fatalf("could not parse outputDir filepath %s: %v", outputDir, err)
+		logger.Fatalf("could not parse outputDir filepath '%s': %v", outputDir, err)
 	}
 
 	err = fs.EnsureDirectory(absOutputDir)
@@ -91,14 +91,14 @@ func exportRun(cmd *cobra.Command, args []string) {
 	// iterate over the VMs, shut them down and export them
 	for _, vm := range vms {
 
-		logger.Debugf("starting to shutdown VM %s", vm.Descriptor.Name)
+		logger.Debugf("starting to shutdown VM '%s'", vm.Descriptor.Name)
 		formerState, err := vm.Transition(libvirt.DOMAIN_SHUTOFF, true, timeout)
 		if err != nil {
 			logger.Error(err)
 			failed = true
 			continue
 		}
-		logger.Debugf("finshed shutdown process of VM %s", vm.Descriptor.Name)
+		logger.Debugf("finshed shutdown process of VM '%s'", vm.Descriptor.Name)
 
 		// we want to ensure that the previous state of the VM is restored in
 		// any case, register a corresponding defer function
@@ -136,7 +136,7 @@ func exportRun(cmd *cobra.Command, args []string) {
 				} else {
 					logger.Errorf("unable to create a snapshot for the VM '%s': %s ",
 						vm.Descriptor.Name, err)
-					logger.Errorf("exporting VM %s without new snapshot", vm.Descriptor.Name)
+					logger.Errorf("exporting VM '%s' without new snapshot", vm.Descriptor.Name)
 					failed = true
 				}
 				snap.Free()
@@ -144,13 +144,13 @@ func exportRun(cmd *cobra.Command, args []string) {
 
 			// do the actual export job, whenever we exit the scope of the
 			// anonymous function, we wall the restore handler
-			logger.Debugf("starting export process of VM %s", vm.Descriptor.Name)
+			logger.Debugf("starting export process of VM '%s'", vm.Descriptor.Name)
 			err = vm.Export(absOutputDir, logger)
 			if err != nil {
-				logger.Errorf("could not export the VM %s: %v", vm.Descriptor.Name, err)
+				logger.Errorf("could not export the VM '%s': %v", vm.Descriptor.Name, err)
 				failed = true
 			}
-			logger.Debugf("finshed export process of VM %s", vm.Descriptor.Name)
+			logger.Infof("Exported VM '%s'", vm.Descriptor.Name)
 		}()
 
 	}
