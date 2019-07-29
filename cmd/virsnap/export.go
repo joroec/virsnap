@@ -6,17 +6,13 @@
 package main
 
 import (
-	"fmt"
-	"os"
-	"path"
 	"path/filepath"
 
+	"github.com/joroec/virsnap/pkg/fs"
 	"github.com/joroec/virsnap/pkg/virt"
+
 	"github.com/libvirt/libvirt-go"
 	"github.com/spf13/cobra"
-	"golang.org/x/sys/unix"
-
-	libvirtxml "github.com/libvirt/libvirt-go-xml"
 )
 
 var (
@@ -29,11 +25,18 @@ var (
 
 	// exportCmd is a global variable defining the corresponding cobra command
 	exportCmd = &cobra.Command{
-		Use:   "export --output-dir <regex1> [<regex2>] [<regex3>] ...",
-		Short: "Copy the hard drive images of a VM to an export directory",
-		Long:  "TODO: write",
-		Args:  cobra.MinimumNArgs(1),
-		Run:   exportRun,
+		Use:   "export --output-dir <export_directory> <regex1> [<regex2>] [<regex3>] ...",
+		Short: "Export a VM by copying the hard drive images to an output directory",
+		Long: "Export a VM by copying the hard drive images and an copy of the " +
+			"VMs XML descriptor file to an output directory. Exports any found " +
+			"virtual machine with a name matching at least one of the given " +
+			"regular expressions. To ensure a safe export, the VM needs to be " +
+			"shutoff. Hence, virsnap shuts down the VM if its running, exports the " +
+			"disk files and restores the VM's previous state afterwards. Apart from " +
+			"this, there is an option to create a snapshot of the VM after " +
+			"shutdowning and before exporting to the given directory.",
+		Args: cobra.MinimumNArgs(1),
+		Run:  exportRun,
 	}
 )
 
@@ -58,37 +61,17 @@ func init() {
 }
 
 // createRun takes as parameter the name of the VMs to create a snapshot for
+// TODO: refactor, at skipping state is not reserved.
 func exportRun(cmd *cobra.Command, args []string) {
 	// check the validity of the console line parameters
 	absOutputDir, err := filepath.Abs(outputDir)
 	if err != nil {
-		logger.Fatalf("could not parse outputDir filepath: %v", err)
+		logger.Fatalf("could not parse outputDir filepath %s: %v", outputDir, err)
 	}
 
-	// TODO: TOCTOU race condition?
-	stat, err := os.Stat(absOutputDir)
-	if err == nil {
-		if os.IsNotExist(err) {
-			// if path does not already exist: try to create target directory.
-			err = os.Mkdir(absOutputDir, 0700)
-			if err != nil {
-				logger.Fatalf("could not create output directory: %v", err)
-			}
-		} else {
-			// another error occured
-			logger.Fatalf("could not parse outputDir filepath: %v", err)
-		}
-	}
-
-	// check if stat denotes a directory
-	if !stat.IsDir() {
-		logger.Fatal("output directory does not point toa directory")
-	}
-
-	// check permissions for this directory
-	err = unix.Access(absOutputDir, unix.R_OK|unix.W_OK)
+	err = fs.EnsureDirectory(absOutputDir)
 	if err != nil {
-		logger.Fatal("output directory is not writable or readable")
+		logger.Fatal(err)
 	}
 
 	vms, err := virt.ListMatchingVMs(logger, args)
@@ -105,8 +88,9 @@ func exportRun(cmd *cobra.Command, args []string) {
 	// the exit code of the program after iterating over the virtual machines.
 	failed := false
 
+	// iterate over the VMs, shut them down and export them
 	for _, vm := range vms {
-		// iterate over the VMs, shut them down and export them
+
 		formerState, err := vm.Transition(libvirt.DOMAIN_SHUTOFF, true, timeout)
 		if err != nil {
 			logger.Error(err)
@@ -114,104 +98,57 @@ func exportRun(cmd *cobra.Command, args []string) {
 			continue
 		}
 
-		// should we create a snapshot after the VM has been shutdown?
-		if snapshot {
-			logger.Debugf("Beginning creation of snapshot for VM '%s'.",
-				vm.Descriptor.Name,
-			)
+		// we want to ensure that the previous state of the VM is restored in
+		// any case, register a corresponding defer function
+		func() {
+			// restore previous state of VM
+			defer func() {
+				logger.Debugf("restoring previous state of vm '%s'", vm.Descriptor.Name)
 
-			snap, err := vm.CreateSnapshot("virsnap_",
-				"snapshot created by virnsnap")
-			if err == nil {
-				logger.Infof("Created snapshot '%s' for VM '%s'",
-					snap.Descriptor.Name, vm.Descriptor.Name)
-			} else {
-				logger.Errorf("unable to create snapshot for VM: '%s': %s",
-					vm.Descriptor.Name,
-					err,
-				)
-				failed = true
-				// no continue here, since we want to startup the VM is any case!
-			}
-			snap.Free() // we dont need to snapshot object any longer
-		}
-
-		// export the VM
-
-		// get the XML descriptor
-		xml, err := vm.Instance.GetXMLDesc(0)
-		if err != nil {
-			err = fmt.Errorf("unable to get XML descriptor of VM: %s", err)
-			logger.Warnf("Skipping VM: %s", err)
-			continue
-		}
-
-		descriptor := libvirtxml.Domain{}
-		err = descriptor.Unmarshal(xml)
-		if err != nil {
-			err = fmt.Errorf("unable to unmarshal XML descriptor of VM: %s", err)
-			logger.Warnf("Skipping VM: %s", err)
-			continue
-		}
-
-		// create the output directory for the VM if not already existing
-		// TODO: sanitize name
-		// TODO: TOCTOU race condition?
-		vmOutputDir := path.Join(absOutputDir, descriptor.Name)
-		stat, err = os.Stat(vmOutputDir)
-		if err == nil {
-			if os.IsNotExist(err) {
-				// if path does not already exist: try to create target directory.
-				err = os.Mkdir(vmOutputDir, 0700)
+				_, err = vm.Transition(formerState, true, timeout)
 				if err != nil {
-					err = fmt.Errorf("could not create vm output directory %s: %v",
-						vmOutputDir, err)
-					logger.Warnf("Skipping VM: %s", err)
-					continue
+					logger.Errorf("unable to restore state '%s' of VM '%s': %s",
+						virt.GetStateString(formerState), vm.Descriptor.Name, err)
+					failed = true
+
+					newState, err := vm.GetCurrentStateString()
+					if err != nil {
+						logger.Errorf("unable to retrieve current state of VM '%s': %s ",
+							vm.Descriptor.Name, err)
+					}
+
+					logger.Warnf("state of VM '%s' is now '%s'", vm.Descriptor.Name,
+						newState)
 				}
-			} else {
-				// another error occured
-				err = fmt.Errorf("could not parse outputDir filepath: %v", err)
-				logger.Warnf("Skipping VM: %s", err)
-				continue
+			}()
+
+			// should we create a snapshot after the VM has been shutdown?
+			if snapshot {
+				logger.Debugf("Beginning creation of snapshot for VM '%s'.",
+					vm.Descriptor.Name)
+
+				snap, err := vm.CreateSnapshot("virsnap_", "snapshot created by virnsnap")
+				if err == nil {
+					logger.Infof("Created snapshot '%s' for VM '%s'", snap.Descriptor.Name,
+						vm.Descriptor.Name)
+				} else {
+					logger.Errorf("unable to create a snapshot for the VM '%s': %s ",
+						vm.Descriptor.Name, err)
+					logger.Errorf("exporting VM %s without new snapshot", vm.Descriptor.Name)
+					failed = true
+				}
+				snap.Free()
 			}
-		}
 
-		// loop over HDDs and store them using differential file sync
-		for _, disk := range descriptor.Devices.Disks {
-			// TODO: Continue implementation
-			fmt.Println(disk)
-		}
-
-		// transform descriptor and store it
-
-		// restore previous state
-		logger.Debugf("restoring previous state of vm '%s'", vm.Descriptor.Name)
-
-		_, err = vm.Transition(formerState, true, timeout)
-		if err != nil {
-			logger.Errorf("unable to restore state '%s' of VM '%s': %s",
-				virt.GetStateString(formerState),
-				vm.Descriptor.Name,
-				err,
-			)
-			failed = true
-
-			newState, err := vm.GetCurrentStateString()
+			// do the actual export job, whenever we exit the scope of the
+			// anonymous function, we wall the restore handler
+			err = vm.Export(absOutputDir, logger)
 			if err != nil {
-				logger.Errorf("unable to retrieve current state of VM '%s': %s ",
-					vm.Descriptor.Name,
-					err,
-				)
-				continue
+				logger.Errorf("could not export the VM %s: %v", vm.Descriptor.Name, err)
+				failed = true
 			}
+		}()
 
-			logger.Warnf("state of VM '%s' is now '%s'", vm.Descriptor.Name,
-				newState)
-			continue
-		}
-
-		logger.Debugf("Finished export of VM '%s'.", vm.Descriptor.Name)
 	}
 
 	// TODO (obitech): improve error handling
