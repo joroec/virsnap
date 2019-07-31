@@ -75,7 +75,8 @@ func init() {
 	RootCmd.AddCommand(createCmd)
 }
 
-// createRun takes as parameter the name of the VMs to create a snapshot for
+// createRun takes as parameter the regular expressions of the names of the VMs
+// to create a snapshot for
 func createRun(cmd *cobra.Command, args []string) {
 	// check the validity of the console line parameters
 	if force && !shutdown {
@@ -109,7 +110,7 @@ func createRun(cmd *cobra.Command, args []string) {
 			if err != nil {
 				logger.Error(err)
 				failed = true
-				continue
+				continue // continue with next VM
 			}
 		}
 
@@ -131,7 +132,8 @@ func createRun(cmd *cobra.Command, args []string) {
 			// no continue here, since we want to startup the VM is any case!
 		}
 
-		func() { // anonymous function for not calling snapshot.Free in a loop
+		// scoped block for efficiently freeing the snapshots
+		{
 			defer snapshot.Free()
 
 			if shutdown {
@@ -153,12 +155,12 @@ func createRun(cmd *cobra.Command, args []string) {
 							vm.Descriptor.Name,
 							err,
 						)
-						return // we are in an anonymous function
+						continue // continue with next VM
 					}
 
 					logger.Warnf("state of VM '%s' is now '%s'", vm.Descriptor.Name,
 						newState)
-					return // we are in an anonymous function
+					continue // continue with next VM
 				}
 			}
 
@@ -166,7 +168,7 @@ func createRun(cmd *cobra.Command, args []string) {
 				snapshot.Descriptor.Name,
 				vm.Descriptor.Name,
 			)
-		}()
+		}
 
 	}
 

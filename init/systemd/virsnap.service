@@ -11,8 +11,12 @@ Type=oneshot
 
 # You can adjust the following lines according to your personal preference.
 
-# Create a new snapshot of any VM when the VM is shutoff.
-ExecStart=/usr/local/bin/virsnap create --shutdown --force --verbose "^.*$"
-
 # Clean expired snapshots.
 ExecStart=/usr/local/bin/virsnap clean --keep 30 --assume-yes --verbose "^.*$"
+
+# Create a new snapshot of any VM when the VM is shutoff and export the hard
+# drive disk images to a given directory.
+ExecStart=/usr/local/bin/virsnap export --output-dir "/ADD_YOUR_PATH" --snapshot=true "^.*$"
+
+# Create a new snapshot of any VM when the VM is shutoff.
+# ExecStart=/usr/local/bin/virsnap create --shutdown --force --verbose "^.*$"

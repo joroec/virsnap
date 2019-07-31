@@ -13,6 +13,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/joroec/virsnap/pkg/instrument/log"
+
 	"github.com/libvirt/libvirt-go"
 	libvirtxml "github.com/libvirt/libvirt-go-xml"
 )
@@ -24,7 +26,7 @@ import (
 type VM struct {
 	Instance   libvirt.Domain
 	Descriptor libvirtxml.Domain
-	Logger     Logger
+	Logger     log.Logger
 }
 
 // Free ist just a convenience function to free the associated libvirt.Domain
@@ -514,7 +516,7 @@ func (vm *VM) Transition(to libvirt.DomainState, forceShutdown bool,
 // parameter is the libvirt/qemu socket URL to connect to.
 // The caller is responsible for calling FreeVMs on the returned slice to free any
 // buffer in libvirt. The returned VMs are sorted lexically by name.
-func ListMatchingVMs(log Logger, regexes []string, socketURL string) ([]VM, error) {
+func ListMatchingVMs(log log.Logger, regexes []string, socketURL string) ([]VM, error) {
 	// argument validity checking
 	exprs := make([]*regexp.Regexp, 0, len(regexes))
 	for _, arg := range regexes {
@@ -632,7 +634,7 @@ func (s *VMSorter) Swap(i int, j int) {
 // FreeVMs is a function that takes a slice of VMs and frees any associated
 // libvirt.Domain. Usually, this is called after ListMatchingVMs with a
 // "defer" statement.
-func FreeVMs(log Logger, vms []VM) {
+func FreeVMs(log log.Logger, vms []VM) {
 	for _, vm := range vms {
 		err := vm.Instance.Free()
 		if err != nil {

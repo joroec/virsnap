@@ -16,6 +16,7 @@ Usage:
 Available Commands:
   clean       Remove expired snapshots from the system
   create      Create a snapshot of one or more virtual machines
+  export      Export a VM by copying the hard drive images to an output directory
   help        Help about any command
   list        List snapshots of one or more virtual machines
   version     Print the version of the software
@@ -24,6 +25,7 @@ Flags:
   -h, --help                  help for virsnap
   -e, --log-encoding string   sets the log encoding (console, json) (default "console")
   -l, --log-level string      sets the log level (debug, info, warn, error) (default "info")
+  -u, --socket-url string     sets the libvirt socket URL to connect to (default "qemu:///system")
 
 Use "virsnap [command] --help" for more information about a command.
 ```
@@ -117,6 +119,30 @@ examplevm2 (current state: DOMAIN_RUNNING, 2 snapshots total)
 | virsnap_condescending_fermat | Thu Jul 11 09:09:09 CEST 2019 | shutoff |
 +------------------------------+-------------------------------+---------+
 
+```
+
+### Export VMs (incl. snapshots)
+
+You need to have `rsync` installed on your system to use this feature.
+
+```
+joroec@host:~ $ virsnap export --output-dir "/home/joroe/backup" --snapshot true --log-level debug "^testvm$"
+2019-07-29T21:11:54.421+0200    DEBUG   Logger initialized
+2019-07-29T21:11:54.424+0200    DEBUG   starting to shutdown VM testvm
+2019-07-29T21:11:54.424+0200    DEBUG   Domain 'testvm' is already shutoff.
+2019-07-29T21:11:54.424+0200    DEBUG   finshed shutdown process of VM testvm
+2019-07-29T21:11:54.424+0200    DEBUG   Beginning creation of snapshot for VM 'testvm'.
+2019-07-29T21:11:54.534+0200    INFO    Created snapshot 'virsnap_pensive_kalam' for VM 'testvm'
+2019-07-29T21:11:54.534+0200    DEBUG   starting export process of VM testvm
+sending incremental file list
+testvm.qcow2
+ 21,479,622,103 100%  245.01MB/s    0:01:23 (xfr#1, to-chk=0/1)
+
+sent 21,484,866,247 bytes  received 35 bytes  254,258,772.57 bytes/sec
+total size is 21,479,622,103  speedup is 1.00
+2019-07-29T21:13:18.151+0200    INFO    Exported VM testvm
+2019-07-29T21:13:18.151+0200    DEBUG   restoring previous state of vm 'testvm'
+2019-07-29T21:13:18.154+0200    DEBUG   Domain 'testvm' is already shutoff.
 ```
 
 ## Dependencies

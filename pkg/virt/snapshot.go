@@ -11,6 +11,8 @@ import (
 	"regexp"
 	"sort"
 
+	"github.com/joroec/virsnap/pkg/instrument/log"
+
 	"github.com/docker/docker/pkg/namesgenerator"
 	"github.com/libvirt/libvirt-go"
 	libvirtxml "github.com/libvirt/libvirt-go-xml"
@@ -128,7 +130,7 @@ func (vm *VM) ListMatchingSnapshots(regexes []string) ([]Snapshot, error) {
 // FreeSnapshots is a function that takes a slice of snapshots and frees any
 // associated libvirt.DomainSnapshot. Usually, this is called after
 // ListMatchingSnapshots with a "defer" statement.
-func FreeSnapshots(log Logger, snapshots []Snapshot) {
+func FreeSnapshots(log log.Logger, snapshots []Snapshot) {
 	for _, snapshot := range snapshots {
 		err := snapshot.Instance.Free()
 		if err != nil {
