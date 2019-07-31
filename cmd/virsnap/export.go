@@ -81,7 +81,7 @@ func exportRun(cmd *cobra.Command, args []string) {
 
 	vms, err := virt.ListMatchingVMs(logger, args, socketURL)
 	if err != nil {
-		logger.Fatal("could not retrieve virtual machines.")
+		logger.Fatalf("could not retrieve virtual machines: %s", err)
 	}
 	defer virt.FreeVMs(logger, vms)
 
