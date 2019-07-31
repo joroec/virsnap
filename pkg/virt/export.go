@@ -20,7 +20,7 @@ import (
 )
 
 // Export is a function that exports a given VM.
-func (vm *VM) Export(outputDirectory string, logger log.Logger) error {
+func (vm *VM) Export(outputDirectory string, perm os.FileMode, logger log.Logger) error {
 	// get the XML descriptor
 	xml, err := vm.Instance.GetXMLDesc(0)
 	if err != nil {
@@ -39,7 +39,7 @@ func (vm *VM) Export(outputDirectory string, logger log.Logger) error {
 	sanVMName := sanitize.BaseName(vm.Descriptor.Name)
 
 	vmOutputDir := path.Join(outputDirectory, sanVMName)
-	err = fs.EnsureDirectory(vmOutputDir)
+	err = os.MkdirAll(vmOutputDir, perm)
 	if err != nil {
 		return err
 	}

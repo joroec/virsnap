@@ -6,22 +6,27 @@
 package main
 
 import (
+	"os"
 	"path/filepath"
 
-	"github.com/joroec/virsnap/pkg/fs"
 	"github.com/joroec/virsnap/pkg/virt"
 
 	"github.com/libvirt/libvirt-go"
 	"github.com/spf13/cobra"
 )
 
+const (
+	// filemode denotes the access rights for created files and directories.
+	filemode = 0700
+)
+
 var (
 	// outputDir is the target directory of the backup
-	outputDir = ""
+	outputDir string
 
-	// snapshot determines whether virsnap should make a new snapshot after the
-	// machine was shut down.
-	snapshot = true
+	// snapshotAfterShutdown determines whether virsnap should make a new
+	// snapshot after the machine was shut down.
+	snapshotAfterShutdown = true
 
 	// exportCmd is a global variable defining the corresponding cobra command
 	exportCmd = &cobra.Command{
@@ -48,8 +53,8 @@ func init() {
 		"desc")
 	exportCmd.MarkFlagRequired("output-dir")
 
-	exportCmd.Flags().BoolVarP(&snapshot, "snapshot", "s", true, "Make new "+
-		"snapshot after shutdowning the machine.")
+	exportCmd.Flags().BoolVarP(&snapshotAfterShutdown, "snapshot", "s", true,
+		"Create a new snapshot after the machine has been shut down.")
 
 	exportCmd.Flags().IntVarP(&timeout, "timeout", "t", 3, "Timeout in minutes "+
 		"to wait for a virtual machine to shutdown gracefully before forcing the "+
@@ -60,7 +65,7 @@ func init() {
 	RootCmd.AddCommand(exportCmd)
 }
 
-// createRun takes as parameter the regular expressions of the names of the VMs
+// exportRun takes as parameter the regular expressions of the names of the VMs
 // to export to the given output directory
 func exportRun(cmd *cobra.Command, args []string) {
 	// check the validity of the console line parameters
@@ -69,9 +74,9 @@ func exportRun(cmd *cobra.Command, args []string) {
 		logger.Fatalf("could not parse outputDir filepath '%s': %v", outputDir, err)
 	}
 
-	err = fs.EnsureDirectory(absOutputDir)
+	err = os.MkdirAll(absOutputDir, filemode)
 	if err != nil {
-		logger.Fatal(err)
+		logger.Fatalf("could not create the output directory: %s", err)
 	}
 
 	vms, err := virt.ListMatchingVMs(logger, args, socketURL)
@@ -86,7 +91,7 @@ func exportRun(cmd *cobra.Command, args []string) {
 
 	// a boolean indicating whether at least one error occured. Useful for
 	// the exit code of the program after iterating over the virtual machines.
-	failed := false
+	var failed bool
 
 	// iterate over the VMs, shut them down and export them
 	for _, vm := range vms {
@@ -100,9 +105,8 @@ func exportRun(cmd *cobra.Command, args []string) {
 		}
 		logger.Debugf("finshed shutdown process of VM '%s'", vm.Descriptor.Name)
 
-		// we want to ensure that the previous state of the VM is restored in
-		// any case, register a corresponding defer function
-		func() {
+		// scoped block for efficiently restoring the previous state of the VM
+		{
 			// restore previous state of VM
 			defer func() {
 				logger.Debugf("restoring previous state of vm '%s'", vm.Descriptor.Name)
@@ -125,7 +129,7 @@ func exportRun(cmd *cobra.Command, args []string) {
 			}()
 
 			// should we create a snapshot after the VM has been shutdown?
-			if snapshot {
+			if snapshotAfterShutdown {
 				logger.Debugf("Beginning creation of snapshot for VM '%s'.",
 					vm.Descriptor.Name)
 
@@ -143,16 +147,16 @@ func exportRun(cmd *cobra.Command, args []string) {
 			}
 
 			// do the actual export job, whenever we exit the scope of the
-			// anonymous function, we wall the restore handler
+			// scoped block, we restore the previous state of the VM
 			logger.Debugf("starting export process of VM '%s'", vm.Descriptor.Name)
-			err = vm.Export(absOutputDir, logger)
+			err = vm.Export(absOutputDir, filemode, logger)
 			if err != nil {
 				logger.Errorf("could not export the VM '%s': %v", vm.Descriptor.Name, err)
 				failed = true
 			}
 			logger.Infof("Exported VM '%s'", vm.Descriptor.Name)
-		}()
 
+		}
 	}
 
 	// TODO (obitech): improve error handling

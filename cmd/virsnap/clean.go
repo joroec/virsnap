@@ -90,6 +90,7 @@ func cleanRun(cmd *cobra.Command, args []string) {
 	// the exit code of the program after iterating over the virtual machines.
 	failed := false
 
+vmfor:
 	for _, vm := range vms {
 
 		// iterate over the domains and clean the snapshots for each of it
@@ -103,11 +104,12 @@ func cleanRun(cmd *cobra.Command, args []string) {
 			continue
 		}
 
-		func() { // anonymous function for not calling snapshot.Free in a loop
+		// scoped block for efficiently freeing the snapshots
+		{
 			defer virt.FreeSnapshots(logger, snapshots)
 
 			if len(snapshots) <= keepVersions {
-				return
+				continue vmfor // continue with next VM
 			}
 
 			// iterate over the snapshot exceeding the k snapshots that should
@@ -139,7 +141,7 @@ func cleanRun(cmd *cobra.Command, args []string) {
 							err,
 						)
 						failed = true
-						return // we are in an anonymous function
+						continue vmfor // continue with next VM
 					}
 				} else {
 					logger.Infof("skipping removal of snapshot '%s' of VM '%s'",
@@ -148,7 +150,8 @@ func cleanRun(cmd *cobra.Command, args []string) {
 					)
 				}
 			}
-		}()
+		}
+
 	}
 	// TODO (obitech): improve error handling
 	// See: https://blog.golang.org/errors-are-values
