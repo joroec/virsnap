@@ -21,3 +21,6 @@ Description=Description=A CLI snapshot systemd timer for libvirt
 # Execute virsnap every day at 4am.
 # You can adjust the following line according to your personal preference.
 OnCalendar=*-*-* 04:00:00
+
+[Install]
+WantedBy=timers.target
