@@ -216,7 +216,7 @@ $ journalctl -u virsnap
 
 Start periodic execution:
 ```shell
-$ systemctl start virsnap.timer
+$ systemctl enable virsnap.timer
 ```
 
 Check if the timer is activated:
