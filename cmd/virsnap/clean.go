@@ -94,7 +94,8 @@ vmfor:
 	for _, vm := range vms {
 
 		// iterate over the domains and clean the snapshots for each of it
-		snapshots, err := vm.ListMatchingSnapshots([]string{".*"})
+		regex := fmt.Sprintf("^%s.*$", snapshotPrefix)
+		snapshots, err := vm.ListMatchingSnapshots([]string{regex})
 		if err != nil {
 			logger.Errorf("skpping VM '%s': error, unable to get snapshot: %s",
 				vm.Descriptor.Name,
