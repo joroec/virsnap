@@ -11,6 +11,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	// snapshotPrefix is a prefix for all snapshots created by virsnap.
+	snapshotPrefix = "virsnap_"
+)
+
 var (
 	// shutdown is a global variable determing whether virsnap should try to
 	// shutdown the virtual machine before taking the snapshot
