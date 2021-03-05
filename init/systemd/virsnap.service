@@ -19,4 +19,4 @@ ExecStart=/usr/local/bin/virsnap clean --keep 30 --assume-yes --log-level debug 
 ExecStart=/usr/local/bin/virsnap export --output-dir "/ADD_YOUR_PATH" --log-level debug --snapshot=true "^.*$"
 
 # Create a new snapshot of any VM when the VM is shutoff.
-# ExecStart=/usr/local/bin/virsnap create --shutdown --force --verbose "^.*$"
+# ExecStart=/usr/local/bin/virsnap create --shutdown --force --log-level debug "^.*$"

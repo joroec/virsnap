@@ -90,7 +90,6 @@ func cleanRun(cmd *cobra.Command, args []string) {
 	// the exit code of the program after iterating over the virtual machines.
 	failed := false
 
-vmfor:
 	for _, vm := range vms {
 
 		// iterate over the domains and clean the snapshots for each of it
@@ -105,12 +104,12 @@ vmfor:
 			continue
 		}
 
-		// scoped block for efficiently freeing the snapshots
-		{
+		// anonymous function for safely calling defer
+		func() {
 			defer virt.FreeSnapshots(logger, snapshots)
 
 			if len(snapshots) <= keepVersions {
-				continue vmfor // continue with next VM
+				return // anonymous function for safely calling defer
 			}
 
 			// iterate over the snapshot exceeding the k snapshots that should
@@ -142,7 +141,7 @@ vmfor:
 							err,
 						)
 						failed = true
-						continue vmfor // continue with next VM
+						return
 					}
 				} else {
 					logger.Infof("skipping removal of snapshot '%s' of VM '%s'",
@@ -151,7 +150,7 @@ vmfor:
 					)
 				}
 			}
-		}
+		}()
 
 	}
 	// TODO (obitech): improve error handling

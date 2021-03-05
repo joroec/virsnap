@@ -90,45 +90,50 @@ func listRun(cmd *cobra.Command, args []string) {
 			continue
 		}
 
-		defer virt.FreeSnapshots(logger, snapshots)
+		// anonymous function for safely calling defer
+		func() {
+			defer virt.FreeSnapshots(logger, snapshots)
 
-		// print the VM header to stdout
-		fmt.Printf("%s (current state: %s, %d snapshots total)\n",
-			color.BGreen(vm.Descriptor.Name), vmstate,
-			len(snapshots))
+			// print the VM header to stdout
+			fmt.Printf("%s (current state: %s, %d snapshots total)\n",
+				color.BGreen(vm.Descriptor.Name), vmstate,
+				len(snapshots))
 
-		// print no snapshot table if there are no snapshots for this VM
-		if len(snapshots) == 0 {
-			continue
-		}
-
-		table := tablewriter.NewWriter(os.Stdout)
-		table.SetHeader([]string{"Snapshot", "Time", "State"})
-		table.SetRowLine(false)
-
-		for _, snapshot := range snapshots {
-
-			// convert timestamp to human-readable format
-			timeInt, err := strconv.ParseInt(snapshot.Descriptor.CreationTime, 10, 64)
-			if err != nil {
-				logger.Errorf("skipping VM '%s': unable to convert snapshot creation time of VM: %s",
-					vm.Descriptor.Name,
-					err,
-				)
-				continue
+			// print no snapshot table if there are no snapshots for this VM
+			if len(snapshots) == 0 {
+				return // anonymous function for safely calling defer
 			}
-			time := time.Unix(timeInt, 0)
 
-			// append the table row for this snapshot
-			table.Append([]string{snapshot.Descriptor.Name,
-				time.Format("Mon Jan 2 15:04:05 MST 2006"), snapshot.Descriptor.State})
-		}
+			table := tablewriter.NewWriter(os.Stdout)
+			table.SetHeader([]string{"Snapshot", "Time", "State"})
+			table.SetRowLine(false)
 
-		table.Render()
+			for _, snapshot := range snapshots {
 
-		// do not print a new line if we are the last VM
-		if index != len(vms)-1 {
-			fmt.Println("")
-		}
+				// convert timestamp to human-readable format
+				timeInt, err := strconv.ParseInt(snapshot.Descriptor.CreationTime, 10, 64)
+				if err != nil {
+					logger.Errorf("skipping VM '%s': unable to convert snapshot creation time of VM: %s",
+						vm.Descriptor.Name,
+						err,
+					)
+					return // anonymous function for safely calling defer
+				}
+				time := time.Unix(timeInt, 0)
+
+				// append the table row for this snapshot
+				table.Append([]string{snapshot.Descriptor.Name,
+					time.Format("Mon Jan 2 15:04:05 MST 2006"), snapshot.Descriptor.State})
+			}
+
+			table.Render()
+
+			// do not print a new line if we are the last VM
+			if index != len(vms)-1 {
+				fmt.Println("")
+			}
+
+		}()
+
 	}
 }

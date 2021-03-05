@@ -105,8 +105,8 @@ func exportRun(cmd *cobra.Command, args []string) {
 		}
 		logger.Debugf("finshed shutdown process of VM '%s'", vm.Descriptor.Name)
 
-		// scoped block for efficiently restoring the previous state of the VM
-		{
+		// anonymous function for safely calling defer
+		func() {
 			// restore previous state of VM
 			defer func() {
 				logger.Debugf("restoring previous state of vm '%s'", vm.Descriptor.Name)
@@ -156,7 +156,7 @@ func exportRun(cmd *cobra.Command, args []string) {
 			}
 			logger.Infof("Exported VM '%s'", vm.Descriptor.Name)
 
-		}
+		}()
 	}
 
 	// TODO (obitech): improve error handling

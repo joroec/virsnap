@@ -137,8 +137,8 @@ func createRun(cmd *cobra.Command, args []string) {
 			// no continue here, since we want to startup the VM is any case!
 		}
 
-		// scoped block for efficiently freeing the snapshots
-		{
+		// anonymous function for safely calling defer
+		func() {
 			defer snapshot.Free()
 
 			if shutdown {
@@ -160,12 +160,12 @@ func createRun(cmd *cobra.Command, args []string) {
 							vm.Descriptor.Name,
 							err,
 						)
-						continue // continue with next VM
+						return // anonymous function for safely calling defer
 					}
 
 					logger.Warnf("state of VM '%s' is now '%s'", vm.Descriptor.Name,
 						newState)
-					continue // continue with next VM
+					return // anonymous function for safely calling defer
 				}
 			}
 
@@ -173,7 +173,7 @@ func createRun(cmd *cobra.Command, args []string) {
 				snapshot.Descriptor.Name,
 				vm.Descriptor.Name,
 			)
-		}
+		}()
 
 	}
 
